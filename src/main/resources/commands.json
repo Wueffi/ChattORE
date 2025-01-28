@@ -68,7 +68,8 @@
   {
     "command": "waffle",
     "description": "tasty...",
-    "globalChat": "<yellow>Guess who likes 🧇s. <gold><name> <yellow>does!"
+    "globalChat": "<yellow>Guess who likes waffles. <gold><name> <yellow>does!",
+    "localChat": "<gold>Wueffi <yellow> does too!"
   },
   {
     "command": "bark",
@@ -103,7 +104,7 @@
   {
     "command": "c",
     "description": "View format codes",
-    "localChat": "Formatting: <bold>l</bold> <underlined>n</underlined> <strikethrough>m</strikethrough> <italic>n</italic> \nColor: <dark_blue>1</dark_blue> <dark_green>2</dark_green> <dark_aqua>3</dark_aqua> <dark_red>4</dark_red> <dark_purple>5</dark_purple> <gold>6</gold> <gray>7</gray> <dark_gray>8</dark_gray> <blue>9</blue> <black>0</black> <green>a</green> <aqua>b</aqua> <red>c</red> <light_purple>d</light_purple> <yellow>e</yellow> <white>f</white>"
+    "localChat": "Formatting: <bold>l</bold> <underlined>n</underlined> <strikethrough>m</strikethrough> <italic>o</italic> \nColor: <dark_blue>1</dark_blue> <dark_green>2</dark_green> <dark_aqua>3</dark_aqua> <dark_red>4</dark_red> <dark_purple>5</dark_purple> <gold>6</gold> <gray>7</gray> <dark_gray>8</dark_gray> <blue>9</blue> <black>0</black> <green>a</green> <aqua>b</aqua> <red>c</red> <light_purple>d</light_purple> <yellow>e</yellow> <white>f</white>"
   },
   {
     "command": "oink",
