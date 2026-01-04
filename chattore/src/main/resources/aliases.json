@@ -26,7 +26,7 @@
   {
     "alias": "nv",
     "commands": [
-      "effect give $1 minecraft:night_vision infinite"
+      "effect give $0 minecraft:night_vision infinite"
     ]
   },
   {
@@ -83,14 +83,14 @@
     "alias": "/hs",
     "commands": [
       "/hpos2",
-      "/rs $1 1"
+      "/rs $0 1"
     ]
   },
   {
     "alias": "/me",
     "commands": [
       "/hpos2",
-      "/replace $1 air"
+      "/replace $0 air"
     ]
   },
   {
@@ -127,41 +127,41 @@
   {
     "alias": "/s",
     "commands": [
-      "/stack $1"
+      "/stack $args"
     ]
   },
   {
     "alias": "/sa",
     "commands": [
-      "/stack -a $1"
+      "/stack -a $args"
     ]
   },
   {
     "alias": "/su",
     "commands": [
       "/hpos2",
-      "/stack $1 u"
+      "/stack $0 u"
     ]
   },
   {
     "alias": "/sd",
     "commands": [
       "/hpos2",
-      "/stack $1 d"
+      "/stack $0 d"
     ]
   },
   {
     "alias": "/sl",
     "commands": [
       "/hpos2",
-      "/stack $1 l"
+      "/stack $0 l"
     ]
   },
   {
     "alias": "/sr",
     "commands": [
       "/hpos2",
-      "/stack $1 r"
+      "/stack $0 r"
     ]
   },
   {
@@ -173,49 +173,49 @@
   {
     "alias": "/r",
     "commands": [
-      "/rotate $1"
+      "/rotate $args"
     ]
   },
   {
     "alias": "/u",
     "commands": [
-      "/undo $1"
+      "/undo $args"
     ]
   },
   {
     "alias": "/z",
     "commands": [
-      "/undo"
+      "/undo $args"
     ]
   },
   {
     "alias": "/y",
     "commands": [
-      "/redo"
+      "/redo $args"
     ]
   },
   {
     "alias": "/m",
     "commands": [
-      "/move $1"
+      "/move $args"
     ]
   },
   {
     "alias": "/md",
     "commands": [
-      "/move $1 $2"
+      "/move $0 d"
     ]
   },
   {
     "alias": "/ma",
     "commands": [
-      "/move $1 -a"
+      "/move -a $args"
     ]
   },
   {
     "alias": "/mas",
     "commands": [
-      "/move $1 -a -s"
+      "/move -as $args"
     ]
   },
   {
@@ -230,7 +230,7 @@
   {
     "alias": "/e",
     "commands": [
-      "/expand $1"
+      "/expand $args"
     ]
   },
   {
@@ -244,6 +244,14 @@
     "alias": "/cfv",
     "commands": [
       "/copy",
+      "/flip",
+      "/paste -a"
+    ]
+  },
+  {
+    "alias": "/xfv",
+    "commands": [
+      "/cut",
       "/flip",
       "/paste -a"
     ]
