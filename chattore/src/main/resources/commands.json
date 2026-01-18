@@ -2,7 +2,7 @@
   {
     "command": "ribbit",
     "description": "Ribbit like a frog",
-    "globalChat": "<dark_green><name>ribbits<green> like a frog"
+    "globalChat": "<dark_green><name><green> ribbits like a frog"
   },
   {
     "command": "love",
