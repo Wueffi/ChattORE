@@ -159,7 +159,7 @@
   {
     "command": "redcmd",
     "description": "intal gento",
-    "globalChat": "<red>Hello allo"
+    "globalChat": "<gray><name><white>: <red>Hello allo"
   },
   {
     "command": "lag",
