@@ -1,5 +1,10 @@
 [
   {
+    "command": "ribbit",
+    "description": "Ribbit like a frog",
+    "globalChat": "<dark_green><name><green> ribbits like a frog"
+  },
+  {
     "command": "love",
     "description": "D'awww",
     "globalChat": "<light_purple><name> <red><bold><3 <light_purple><arg-all>"
