@@ -34,7 +34,12 @@ private class ChatListener(
     private val logger: Logger,
     private val messenger: Messenger,
 ) {
-    private val regexes = config.regexes.map(::Regex)
+
+    private val regexes = config.regexes.mapNotNull { pattern ->
+        runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }
+            .onFailure { logger.error("Invalid regex $pattern: ${it.message}") }
+            .getOrNull()
+    }
 
     @Subscribe
     fun onChatEvent(event: PlayerChatEvent) {
