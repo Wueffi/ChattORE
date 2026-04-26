@@ -18,6 +18,10 @@ data class FormatConfig(
     val global: String = "<prefix> <gray>|</gray> <sender><gray>:</gray> <message>",
     val join: String = "<yellow><player> has joined the network",
     val leave: String = "<yellow><player> has left the network",
+    val bubbleChatBubble: String = "<gray>[</gray><gold>B</gold><gray>]</gray> <prefix> <gray>|</gray> <sender><gray>:</gray> <message>",
+    val bubbleHeading: String = "<yellow>Bubbles:</yellow>",
+    val bubbleList: String = "",
+    val bubbleInfoMessage: String = "<gray>[</gray><gold>Bubbles</gold><gray>]</gray> <message>",
     val joinDiscord: String = "**%player% has joined the network**",
     val leaveDiscord: String = "**%player% has left the network**",
 )

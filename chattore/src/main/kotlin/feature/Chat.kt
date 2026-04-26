@@ -48,7 +48,11 @@ private class ChatListener(
         if (isFlagged(player, message)) return
         logger.info("${player.username} (${player.uniqueId}): $message")
         player.currentServer.ifPresent { server ->
-            messenger.broadcastChatMessage(server.serverInfo.name, player, message)
+            if (messenger.bubbleManager.getBubbleByPlayer(player) != null) {
+                messenger.broadcastBubbleMessage(player, message)
+            } else {
+                messenger.broadcastChatMessage(server.serverInfo.name, player, message)
+            }
         }
     }
 

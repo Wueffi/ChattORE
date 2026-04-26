@@ -46,13 +46,14 @@ class ChattORE @Inject constructor(
         }
         pluginScope.apply {
             val emojis = createEmojiFeature()
-            val messenger = createMessenger(emojis, database, luckPerms, config.format.global)
+            val messenger = createMessenger(emojis, database, luckPerms, config.format)
             val userCache = createUserCache(database.database)
             createAliasFeature()
             createChatFeature(
                 messenger,
                 ChatConfirmationConfig(config.regexes),
             )
+            createBubbleFeature(messenger, config.format, userCache)
             createChattoreFeature()
             createDiscordFeature(messenger, emojis, config.discord)
             createFunCommandsFeature()

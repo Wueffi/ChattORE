@@ -14,17 +14,18 @@ import org.openredstone.chattore.feature.DiscordBroadcastEvent
 import org.openredstone.chattore.feature.Emojis
 import org.openredstone.chattore.feature.NickPreset
 import java.net.URI
+import java.util.UUID
 
 fun PluginScope.createMessenger(
     emojis: Emojis,
     database: Storage,
     luckPerms: LuckPerms,
-    chatBroadcastFormat: String,
+    formatConfig: FormatConfig,
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, chatBroadcastFormat, fileTypeMap)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap)
 }
 
 class Messenger(
@@ -32,7 +33,7 @@ class Messenger(
     private val proxy: ProxyServer,
     private val database: Storage,
     private val luckPerms: LuckPerms,
-    private val chatBroadcastFormat: String,
+    private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
@@ -44,6 +45,12 @@ class Messenger(
         formatReplacement("~~", "st"),
         buildEmojiReplacement(emojis),
     )
+
+    val bubbleManager = BubbleManager()
+    private val seeGlobalChat: MutableList<UUID> = mutableListOf()
+    private var excludedCache: Set<UUID> = emptySet()
+    private var cacheDirty: Boolean = true
+
 
     private fun formatReplacement(key: String, tag: String): TextReplacementConfig =
         TextReplacementConfig.builder()
@@ -80,12 +87,17 @@ class Messenger(
             ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
 
         val compoPrefix = prefix.legacyDeserialize()
-        proxy.all.sendRichMessage(
-            chatBroadcastFormat,
+
+        if (cacheDirty) {
+            rebuildExcludedCache()
+        }
+
+        proxy.allPlayers.filter { it.uniqueId !in excludedCache }.forEach { it.sendRichMessage(
+            formatConfig.global,
             "message" toC prepareChatMessage(message, player),
             "sender" toC sender,
-            "prefix" toC compoPrefix,
-        )
+            "prefix" toC compoPrefix)
+        }
 
         val plainPrefix = PlainTextComponentSerializer.plainText().serialize(compoPrefix)
         val discordBroadcast = DiscordBroadcastEvent(
@@ -95,6 +107,33 @@ class Messenger(
             message
         )
         proxy.eventManager.fireAndForget(discordBroadcast)
+    }
+
+    fun broadcastBubbleMessage(player: Player, message: String) {
+        val userId = player.uniqueId
+        val userManager = luckPerms.userManager
+        val luckUser = userManager.getUser(userId) ?: return
+        val name = database.getNickname(userId) ?: NickPreset(player.username)
+        val sender =
+            "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
+                .renderSimpleC(name.render(player.username))
+
+        val prefix = luckUser.cachedData.metaData.prefix
+            ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
+        val compoPrefix = prefix.legacyDeserialize()
+
+        val bubble = bubbleManager.getBubbleByPlayer(player)
+
+        bubble?.players?.forEach { uuid ->
+            val target = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
+
+            target.sendRichMessage(
+                formatConfig.bubbleChatBubble,
+                "message" toC prepareChatMessage(message, player),
+                "sender" toC sender,
+                "prefix" toC compoPrefix,
+            )
+        }
     }
 
     fun prepareChatMessage(
@@ -143,6 +182,28 @@ class Messenger(
             "[$symbol $name]" +
             "</hover>" +
             "</click><reset>").render()
+    }
+
+    fun rebuildExcludedCache() {
+        val bubbleExcluded = bubbleManager.getBubbles().values.flatMap { it.players }.toMutableSet()
+        bubbleExcluded.removeAll(seeGlobalChat)
+
+        excludedCache = bubbleExcluded
+        cacheDirty = false
+    }
+
+    fun setCacheDirty() {
+        cacheDirty = true
+    }
+
+    fun addGlobalOverride(uuid: UUID) {
+        seeGlobalChat.add(uuid)
+        cacheDirty = true
+    }
+
+    fun removeGlobalOverride(uuid: UUID) {
+        seeGlobalChat.remove(uuid)
+        cacheDirty = true
     }
 
     private fun Component.performReplacements(replacements: List<TextReplacementConfig>): Component =

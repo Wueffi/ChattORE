@@ -41,6 +41,22 @@ Because we want to have a chat system that actually wOREks for us.
 | `/profile about <player>`            | `chattore.profile.about`        | Set your about             | `/playerprofile` |
 | `/profile setabout <player> <about>` | `chattore.profile.about.others` | Set another player's about | `/playerprofile` |
 
+## Chat-Bubble Commands
+
+| Command                        | Permission               | Description                                                     | Aliases                   |
+|--------------------------------|--------------------------|-----------------------------------------------------------------|---------------------------|
+| `/bubble create`               | `chattore.bubble`        | Create ("Blow") a Chat-Bubble                                   | `/bb create\|/blow`       |
+| `/bubble invite <player>`      | `chattore.bubble`        | Invite Players to your (private) Chat-Bubble                    | `/bb invite`              |
+| `/bubble join <player>`        | `chattore.bubble`        | Join a Player's Chat-Bubble                                     | `/bb join`                |
+| `/bubble leave`                | `chattore.bubble`        | Leave your current Chat-Bubble                                  | `/bb leave`               |
+| `/bubble delete`               | `chattore.bubble`        | Delete ("Pop") your current Chat-Bubble                         | `/bb delete\|/pop`        |
+| `/bubble kick <player>`        | `chattore.bubble`        | Kick a Player from your own Chat-Bubble                         | `/bb kick`                |
+| `/bubble setPrivate <boolean>` | `chattore.bubble`        | Set the visibility of your own Chat-Bubble                      | `/bb private`             |
+| `/bubble list`                 | `chattore.bubble`        | List all Chat-Bubbles                                           | `/bb list\|/bubbles`      |
+| `/shout <message>`             | `chattore.bubble`        | Send a message to global chat when inside a Chat-Bubble         | No aliases                |
+| `/bubble forcedelete <player>` | `chattore.bubble.manage` | Force-Delete ("Burst") a specific Chat-Bubble                   | `/bb forcedelete\|/burst` |
+| `seeGlobalChat <boolean>`      | `chattore.bubble`        | Toggles the visibility of global chat when inside a Chat-Bubble | `/gc`                     |
+
 ## Other Commands
 
 | Command                 | Permission            | Description                   | Aliases    |
