@@ -22,11 +22,12 @@ fun PluginScope.createMessenger(
     database: Storage,
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
+    bubbleManager: BubbleManager
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, bubbleManager)
 }
 
 class Messenger(
@@ -36,6 +37,7 @@ class Messenger(
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
+    private val bubbleManager: BubbleManager
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -46,8 +48,6 @@ class Messenger(
         formatReplacement("~~", "st"),
         buildEmojiReplacement(emojis),
     )
-
-    val bubbleManager = BubbleManager()
     private var excludedCache: Set<UUID> = emptySet()
     private var cacheDirty: Boolean = true
 
@@ -75,8 +75,6 @@ class Messenger(
 
     fun broadcastChatMessage(originServer: String, player: Player, message: String) {
         val userId = player.uniqueId
-        val userManager = luckPerms.userManager
-        val luckUser = userManager.getUser(userId) ?: return
         val name = database.getNickname(userId) ?: NickPreset(player.username)
         val sender =
             "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
@@ -109,8 +107,6 @@ class Messenger(
 
     fun broadcastBubbleMessage(player: Player, message: String) {
         val userId = player.uniqueId
-        val userManager = luckPerms.userManager
-        val luckUser = userManager.getUser(userId) ?: return
         val name = database.getNickname(userId) ?: NickPreset(player.username)
         val sender =
             "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
