@@ -22,10 +22,11 @@ data class ChatConfirmationConfig(
 fun PluginScope.createChatFeature(
     messenger: Messenger,
     config: ChatConfirmationConfig,
+    bubbleManager: BubbleManager
 ) {
     val flaggedMessages = ConcurrentHashMap<UUID, String>()
     registerCommands(ConfirmMessage(flaggedMessages, logger, messenger))
-    registerListeners(ChatListener(config, flaggedMessages, logger, messenger))
+    registerListeners(ChatListener(config, flaggedMessages, logger, messenger, bubbleManager))
 }
 
 private class ChatListener(
@@ -33,6 +34,7 @@ private class ChatListener(
     private val flaggedMessages: ConcurrentHashMap<UUID, String>,
     private val logger: Logger,
     private val messenger: Messenger,
+    private val bubbleManager: BubbleManager
 ) {
 
     private val regexes = config.regexes.mapNotNull { pattern ->
@@ -48,7 +50,7 @@ private class ChatListener(
         if (isFlagged(player, message)) return
         logger.info("${player.username} (${player.uniqueId}): $message")
         player.currentServer.ifPresent { server ->
-            if (messenger.bubbleManager.getBubbleByPlayer(player) != null) {
+            if (bubbleManager.getBubbleByPlayer(player) != null) {
                 messenger.broadcastBubbleMessage(player, message)
             } else {
                 messenger.broadcastChatMessage(server.serverInfo.name, player, message)
