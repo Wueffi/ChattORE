@@ -53,7 +53,7 @@ class ChattORE @Inject constructor(
                 messenger,
                 ChatConfirmationConfig(config.regexes),
             )
-            createBubbleFeature(messenger, config.format, userCache)
+            createBubbleFeature(messenger, userCache, database)
             createChattoreFeature()
             createDiscordFeature(messenger, emojis, config.discord)
             createFunCommandsFeature()

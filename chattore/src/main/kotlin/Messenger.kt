@@ -10,6 +10,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextReplacementConfig
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
+import org.openredstone.chattore.feature.BubbleManager
 import org.openredstone.chattore.feature.DiscordBroadcastEvent
 import org.openredstone.chattore.feature.Emojis
 import org.openredstone.chattore.feature.NickPreset
@@ -47,10 +48,8 @@ class Messenger(
     )
 
     val bubbleManager = BubbleManager()
-    private val seeGlobalChat: MutableList<UUID> = mutableListOf()
     private var excludedCache: Set<UUID> = emptySet()
     private var cacheDirty: Boolean = true
-
 
     private fun formatReplacement(key: String, tag: String): TextReplacementConfig =
         TextReplacementConfig.builder()
@@ -83,20 +82,19 @@ class Messenger(
             "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
                 .renderSimpleC(name.render(player.username))
 
-        val prefix = luckUser.cachedData.metaData.prefix
-            ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
-
-        val compoPrefix = prefix.legacyDeserialize()
+        val compoPrefix = getPrefixComponent(userId, player)
 
         if (cacheDirty) {
             rebuildExcludedCache()
         }
 
-        proxy.allPlayers.filter { it.uniqueId !in excludedCache }.forEach { it.sendRichMessage(
-            formatConfig.global,
-            "message" toC prepareChatMessage(message, player),
-            "sender" toC sender,
-            "prefix" toC compoPrefix)
+        proxy.allPlayers.filter { it.uniqueId !in excludedCache }.forEach {
+            it.sendRichMessage(
+                formatConfig.global,
+                "message" toC prepareChatMessage(message, player),
+                "sender" toC sender,
+                "prefix" toC compoPrefix
+            )
         }
 
         val plainPrefix = PlainTextComponentSerializer.plainText().serialize(compoPrefix)
@@ -118,9 +116,7 @@ class Messenger(
             "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
                 .renderSimpleC(name.render(player.username))
 
-        val prefix = luckUser.cachedData.metaData.prefix
-            ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
-        val compoPrefix = prefix.legacyDeserialize()
+        val compoPrefix = getPrefixComponent(userId, player)
 
         val bubble = bubbleManager.getBubbleByPlayer(player)
 
@@ -186,7 +182,7 @@ class Messenger(
 
     fun rebuildExcludedCache() {
         val bubbleExcluded = bubbleManager.getBubbles().values.flatMap { it.players }.toMutableSet()
-        bubbleExcluded.removeAll(seeGlobalChat)
+        bubbleExcluded.removeAll(database.getAllGlobalChatEnabled())
 
         excludedCache = bubbleExcluded
         cacheDirty = false
@@ -196,14 +192,13 @@ class Messenger(
         cacheDirty = true
     }
 
-    fun addGlobalOverride(uuid: UUID) {
-        seeGlobalChat.add(uuid)
-        cacheDirty = true
-    }
+    private fun getPrefixComponent(userId: UUID, player: Player): Component {
+        val luckUser = luckPerms.userManager.getUser(userId) ?: return Component.empty()
 
-    fun removeGlobalOverride(uuid: UUID) {
-        seeGlobalChat.remove(uuid)
-        cacheDirty = true
+        val prefix = luckUser.cachedData.metaData.prefix
+            ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
+
+        return prefix.legacyDeserialize()
     }
 
     private fun Component.performReplacements(replacements: List<TextReplacementConfig>): Component =
