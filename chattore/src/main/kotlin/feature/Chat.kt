@@ -50,8 +50,9 @@ private class ChatListener(
         if (isFlagged(player, message)) return
         logger.info("${player.username} (${player.uniqueId}): $message")
         player.currentServer.ifPresent { server ->
-            if (bubbleManager.getBubbleByPlayer(player) != null) {
-                messenger.broadcastBubbleMessage(player, message)
+            val bubble = bubbleManager.getBubbleByPlayer(player)
+            if (bubble != null) {
+                messenger.broadcastBubbleMessage(player, message, bubble)
             } else {
                 messenger.broadcastChatMessage(server.serverInfo.name, player, message)
             }

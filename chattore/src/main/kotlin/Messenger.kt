@@ -10,6 +10,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextReplacementConfig
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
+import org.openredstone.chattore.feature.Bubble
 import org.openredstone.chattore.feature.BubbleManager
 import org.openredstone.chattore.feature.DiscordBroadcastEvent
 import org.openredstone.chattore.feature.Emojis
@@ -22,12 +23,11 @@ fun PluginScope.createMessenger(
     database: Storage,
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
-    bubbleManager: BubbleManager
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, bubbleManager)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap)
 }
 
 class Messenger(
@@ -37,7 +37,6 @@ class Messenger(
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
-    private val bubbleManager: BubbleManager
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -105,7 +104,7 @@ class Messenger(
         proxy.eventManager.fireAndForget(discordBroadcast)
     }
 
-    fun broadcastBubbleMessage(player: Player, message: String) {
+    fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
         val userId = player.uniqueId
         val name = database.getNickname(userId) ?: NickPreset(player.username)
         val sender =
@@ -114,9 +113,7 @@ class Messenger(
 
         val compoPrefix = getPrefixComponent(userId, player)
 
-        val bubble = bubbleManager.getBubbleByPlayer(player)
-
-        bubble?.players?.forEach { uuid ->
+        bubble.players.forEach { uuid ->
             val target = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
 
             target.sendRichMessage(
@@ -177,7 +174,7 @@ class Messenger(
     }
 
     fun rebuildExcludedCache() {
-        val bubbleExcluded = bubbleManager.getBubbles().values.flatMap { it.players }.toMutableSet()
+        val bubbleExcluded = BubbleManager.getBubbles().flatMap { it.players }.toMutableSet()
         bubbleExcluded.removeAll(database.getAllGlobalChatEnabled())
 
         excludedCache = bubbleExcluded

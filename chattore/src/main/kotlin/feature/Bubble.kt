@@ -9,6 +9,7 @@ import co.aikar.commands.annotation.Flags
 import co.aikar.commands.annotation.Single
 import co.aikar.commands.annotation.Subcommand
 import co.aikar.commands.velocity.contexts.OnlinePlayer
+import com.velocitypowered.api.event.player.PlayerChatEvent
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import net.kyori.adventure.text.Component
@@ -18,24 +19,20 @@ import org.openredstone.chattore.*
 import java.util.UUID
 
 val seeGlobalChatEnabled: Setting<Boolean> = Setting("seeGlobalChat")
-
-fun createBubbleManagerFeature(): BubbleManager {
-    return BubbleManager()
-}
+const val BUBBLE_OWNED: String = "bubble-owned"
 
 fun PluginScope.createBubbleFeature(
     messenger: Messenger,
-    userCache: UserCache,
     database: Storage,
-    bubbleManager: BubbleManager
-) {
+): BubbleManager {
+    val bubbleManager = BubbleManager()
     commandManager.apply {
-        commandContexts.registerContext(Bubble::class.java) { ctx ->
+        commandContexts.registerIssuerOnlyContext(Bubble::class.java) { ctx ->
             val sender = ctx.sender as? Player
                 ?: throw InvalidCommandArgument("This command can only be used by players!")
             val bubble = bubbleManager.getBubbleByPlayer(sender)
                 ?: throw InvalidCommandArgument("You are not in a Chat-Bubble!")
-            if (ctx.hasFlag("bubble-owned") && !bubble.isOwner(sender.uniqueId)) {
+            if (ctx.hasFlag(BUBBLE_OWNED) && !bubble.isOwner(sender.uniqueId)) {
                 val ownerName = proxy.getPlayer(bubble.owner)
                     .map { it.username }
                     .orElse(bubble.owner.toString())
@@ -44,8 +41,8 @@ fun PluginScope.createBubbleFeature(
             bubble
         }
     }
-
-    registerCommands(BubbleCommand(messenger, proxy, userCache, database, bubbleManager))
+    registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager))
+    return bubbleManager
 }
 
 @CommandAlias("bubble|bb")
@@ -53,7 +50,6 @@ fun PluginScope.createBubbleFeature(
 private class BubbleCommand(
     private val messenger: Messenger,
     private val proxy: ProxyServer,
-    private var userCache: UserCache,
     private var database: Storage,
     private var bubbleManager: BubbleManager
 ) : BaseCommand() {
@@ -69,7 +65,6 @@ private class BubbleCommand(
     }
 
     @Subcommand("invite")
-    @CommandCompletion("@${UserCache.COMPLETION_USERNAMES}")
     fun invite(sender: Player, bubble: Bubble, @Single target: OnlinePlayer) {
         val player: Player = target.player
         when {
@@ -88,7 +83,6 @@ private class BubbleCommand(
     }
 
     @Subcommand("join")
-    @CommandCompletion("@${UserCache.COMPLETION_USERNAMES}")
     fun join(sender: Player, @Single target: OnlinePlayer) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a Chat-Bubble!")
@@ -102,50 +96,44 @@ private class BubbleCommand(
 
         bubble.addPlayer(sender.uniqueId)
         messenger.setCacheDirty()
-        bubble.players.forEach { uuid ->
-            val member = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
-            if (member == sender) {
-                member.sendInfo("You successfully joined ${player.username}'s Chat-Bubble!")
-            } else {
-                member.sendInfo("${sender.username} joined your Chat-Bubble!")
-            }
-        }
+        bubble.sendInfos(
+            sender,
+            "You successfully joined ${player.username}'s Chat-Bubble!",
+            "${sender.username} joined your Chat-Bubble!",
+        )
     }
 
     @Subcommand("leave")
     fun leave(sender: Player, bubble: Bubble) {
-        val bubbleId = bubbleManager.getBubbleId(sender.uniqueId)!!
         bubble.removePlayer(sender.uniqueId)
         messenger.setCacheDirty()
         sender.sendInfo("You successfully left the Chat-Bubble!")
         if (bubble.players.isEmpty()) {
-            bubbleManager.removeBubble(bubbleId)
+            bubbleManager.removeBubble(bubble)
             return
         }
-        bubble.players.forEach { uuid ->
-            proxy.getPlayer(uuid).orElse(null)?.sendInfo("${sender.username} left your Chat-Bubble!")
+        if (bubble.owner == sender.uniqueId) {
+            val newOwner = bubble.players.first()
+            bubble.owner = newOwner
+            proxy.playerOrNull(newOwner)?.sendInfo("You are now the owner of the Chat-Bubble!")
         }
+        bubble.broadcastInfo("${sender.username} left your Chat-Bubble!")
     }
 
     @Subcommand("delete")
     @CommandAlias("pop")
-    fun delete(sender: Player, @Flags("bubble-owned") bubble: Bubble) {
-        val bubbleId = bubbleManager.getBubbleId(sender.uniqueId)!!
-        bubble.players.forEach { uuid ->
-            val member = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
-            if (member == sender) {
-                member.sendInfo("You popped the Chat-Bubble!")
-            } else {
-                member.sendInfo("${sender.username} popped your Chat-Bubble!")
-            }
-        }
-        bubbleManager.removeBubble(bubbleId)
+    fun delete(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble) {
+        bubble.sendInfos(
+            sender,
+            "You popped the the Chat-Bubble!",
+            "${sender.username} popped your Chat-Bubble!",
+        )
+        bubbleManager.removeBubble(bubble)
         messenger.setCacheDirty()
     }
 
     @Subcommand("kick")
-    @CommandCompletion("@${UserCache.COMPLETION_USERNAMES}")
-    fun kick(sender: Player, @Flags("bubble-owned") bubble: Bubble, @Single target: OnlinePlayer) {
+    fun kick(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, @Single target: OnlinePlayer) {
         val player: Player = target.player
         if (player.uniqueId == sender.uniqueId)
             throw ChattoreException("You cannot kick yourself!")
@@ -153,38 +141,32 @@ private class BubbleCommand(
         bubble.removePlayer(player.uniqueId)
         messenger.setCacheDirty()
         player.sendInfo("You were kicked out of the Chat-Bubble!")
-        bubble.players.forEach { uuid ->
-            val member = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
-            if (member == sender) {
-                member.sendInfo("You kicked ${player.username} from the Chat-Bubble!")
-            } else {
-                member.sendInfo("${sender.username} kicked ${player.username} from your Chat-Bubble!")
-            }
-        }
+        bubble.sendInfos(
+            sender,
+            "You kicked ${player.username} from the Chat-Bubble!",
+            "${sender.username} kicked ${player.username} from your Chat-Bubble!",
+        )
     }
 
     @Subcommand("setPrivate")
     @CommandCompletion("true|false")
-    fun setPrivate(sender: Player, @Flags("bubble-owned") bubble: Bubble, boolean: Boolean) {
+    fun setPrivate(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, boolean: Boolean) {
         bubble.isPrivate = boolean
-        bubble.players.forEach { uuid ->
-            val member = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
-            if (member == sender) {
-                member.sendInfo("The Chat-Bubble is now ${if (boolean) "private" else "public"}!")
-            } else {
-                member.sendInfo("${sender.username} set the Chat-Bubble to ${if (boolean) "private" else "public"}!")
-            }
-        }
+        bubble.sendInfos(
+            sender,
+            "The Chat-Bubble is now ${if (boolean) "private" else "public"}!",
+            "${sender.username} set the Chat-Bubble to ${if (boolean) "private" else "public"}!",
+        )
     }
 
     @Subcommand("list")
     fun list(sender: Player) {
-        if (bubbleManager.getBubbles().isEmpty()) {
+        if (BubbleManager.getBubbles().isEmpty()) {
             sender.sendInfo("There are currently no Chat-Bubbles!")
             return
         }
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
-        for (bubble in bubbleManager.getBubbles().values) {
+        for (bubble in BubbleManager.getBubbles()) {
             val playersString = bubble.players
                 .mapNotNull { uuid -> proxy.getPlayer(uuid).orElse(null)?.username }
                 .joinToString(", ")
@@ -200,24 +182,20 @@ private class BubbleCommand(
 
     @Subcommand("forcedelete")
     @CommandAlias("burst")
-    @CommandCompletion("@${UserCache.COMPLETION_USERNAMES}")
     @CommandPermission("chattore.bubble.manage")
     fun forcedelete(sender: Player, @Single target: OnlinePlayer) {
         val player: Player = target.player
         val bubble = bubbleManager.getBubbleByPlayer(player)
             ?: throw ChattoreException("Target is not in a Chat-Bubble!")
-        bubble.players.forEach { uuid ->
-            proxy.getPlayer(uuid).orElse(null)?.sendInfo("The Chat-Bubble was burst by ${sender.username}!")
-        }
-        val bubbleId = bubbleManager.getBubbleId(player.uniqueId)!!
-        bubbleManager.removeBubble(bubbleId)
+        bubble.broadcastInfo("The Chat-Bubble was burst by ${sender.username}!")
+        bubbleManager.removeBubble(bubble)
         messenger.setCacheDirty()
         sender.sendInfo("You successfully burst ${player.username}'s Chat-Bubble!")
     }
 
     @CommandAlias("shout")
     fun shout(sender: Player, message: String) {
-        messenger.broadcastChatMessage(sender.currentServer.get().serverInfo.name, sender, message)
+        proxy.eventManager.fireAndForget(PlayerChatEvent(sender, message))
     }
 
     @CommandAlias("seeglobalchat|gc")
@@ -230,10 +208,23 @@ private class BubbleCommand(
             else "You won't see global chat inside your Chat-Bubble anymore!"
         )
     }
+
+    private fun Bubble.sendInfos(you: Player, yourMessage: String, theirMessage: String) {
+        players.forEach { uuid ->
+            val player = proxy.playerOrNull(uuid) ?: return@forEach
+            player.sendInfo(if (player == you) yourMessage else theirMessage)
+        }
+    }
+
+    private fun Bubble.broadcastInfo(message: String) {
+        players.forEach { uuid ->
+            proxy.playerOrNull(uuid)?.sendInfo(message)
+        }
+    }
 }
 
 data class Bubble(
-    val owner: UUID,
+    var owner: UUID,
     val players: MutableSet<UUID>,
     private val invitedPlayers: MutableSet<UUID>,
     var isPrivate: Boolean
@@ -269,31 +260,23 @@ data class Bubble(
 }
 
 class BubbleManager {
-    private val bubbles: MutableMap<Int, Bubble> = mutableMapOf()
-    private var id: Int = 0
+    companion object {
+        private val bubbles: MutableList<Bubble> = mutableListOf()
 
-    fun getBubbles(): Map<Int, Bubble> {
-        return bubbles
+        fun getBubbles(): List<Bubble> {
+            return bubbles
+        }
     }
 
     fun createBubble(player: UUID) {
-        bubbles[id] = Bubble(player, mutableSetOf(player), mutableSetOf(), false)
-        id += 1
+        bubbles.add(Bubble(player, mutableSetOf(player), mutableSetOf(), false))
     }
 
-    fun removeBubble(id: Int) {
-        bubbles.remove(id)
-    }
-
-    fun getBubbleId(player: UUID): Int? {
-        return bubbles.entries.firstOrNull { it.value.players.contains(player) }?.key
-    }
-
-    fun getBubble(id: Int): Bubble? {
-        return bubbles[id]
+    fun removeBubble(bubble: Bubble) {
+        bubbles.remove(bubble)
     }
 
     fun getBubbleByPlayer(player: Player): Bubble? {
-        return bubbles.entries.firstOrNull { it.value.players.contains(player.uniqueId) }?.value
+        return bubbles.firstOrNull { it.players.contains(player.uniqueId) }
     }
 }
