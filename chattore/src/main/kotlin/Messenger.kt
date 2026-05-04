@@ -111,9 +111,7 @@ class Messenger(
     fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
         val (sender, compoPrefix) = senderAndPrefix(player)
         bubble.players.forEach { uuid ->
-            val target = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
-
-            target.sendRichMessage(
+            proxy.playerOrNull(uuid)?.sendRichMessage(
                 formatConfig.bubbleChat,
                 "message" toC prepareChatMessage(message, player),
                 "sender" toC sender,
