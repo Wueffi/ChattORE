@@ -23,11 +23,12 @@ fun PluginScope.createMessenger(
     database: Storage,
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
+    getBubbleManager: () -> BubbleManager,
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, getBubbleManager)
 }
 
 class Messenger(
@@ -37,6 +38,7 @@ class Messenger(
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
+    private val getBubbleManager: () -> BubbleManager,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -117,7 +119,7 @@ class Messenger(
             val target = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
 
             target.sendRichMessage(
-                formatConfig.bubbleChatBubble,
+                formatConfig.bubbleChat,
                 "message" toC prepareChatMessage(message, player),
                 "sender" toC sender,
                 "prefix" toC compoPrefix,
@@ -174,7 +176,7 @@ class Messenger(
     }
 
     fun rebuildExcludedCache() {
-        val bubbleExcluded = BubbleManager.getBubbles().flatMap { it.players }.toMutableSet()
+        val bubbleExcluded = getBubbleManager().getBubbles().flatMap { it.players }.toMutableSet()
         bubbleExcluded.removeAll(database.getAllGlobalChatEnabled())
 
         excludedCache = bubbleExcluded
