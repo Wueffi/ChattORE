@@ -10,13 +10,9 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextReplacementConfig
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
-import org.openredstone.chattore.feature.Bubble
-import org.openredstone.chattore.feature.BubbleManager
-import org.openredstone.chattore.feature.DiscordBroadcastEvent
-import org.openredstone.chattore.feature.Emojis
-import org.openredstone.chattore.feature.NickPreset
+import org.openredstone.chattore.feature.*
 import java.net.URI
-import java.util.UUID
+import java.util.*
 
 fun PluginScope.createMessenger(
     emojis: Emojis,
@@ -74,15 +70,21 @@ class Messenger(
             }
             .build()
 
-    fun broadcastChatMessage(originServer: String, player: Player, message: String) {
+    private fun senderAndPrefix(player: Player): Pair<Component, Component> {
         val userId = player.uniqueId
         val name = database.getNickname(userId) ?: NickPreset(player.username)
         val sender =
             "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
                 .renderSimpleC(name.render(player.username))
 
-        val compoPrefix = getPrefixComponent(userId, player)
+        val luckUser = luckPerms.userManager.getUser(userId)!! // online users guaranteed to be loaded
+        val prefix = luckUser.cachedData.metaData.prefix
+            ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
+        return sender to prefix.legacyDeserialize()
+    }
 
+    fun broadcastChatMessage(originServer: String, player: Player, message: String) {
+        val (sender, compoPrefix) = senderAndPrefix(player)
         if (cacheDirty) {
             rebuildExcludedCache()
         }
@@ -107,14 +109,7 @@ class Messenger(
     }
 
     fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
-        val userId = player.uniqueId
-        val name = database.getNickname(userId) ?: NickPreset(player.username)
-        val sender =
-            "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
-                .renderSimpleC(name.render(player.username))
-
-        val compoPrefix = getPrefixComponent(userId, player)
-
+        val (sender, compoPrefix) = senderAndPrefix(player)
         bubble.players.forEach { uuid ->
             val target = proxy.getPlayer(uuid).orElse(null) ?: return@forEach
 
@@ -185,15 +180,6 @@ class Messenger(
 
     fun setCacheDirty() {
         cacheDirty = true
-    }
-
-    private fun getPrefixComponent(userId: UUID, player: Player): Component {
-        val luckUser = luckPerms.userManager.getUser(userId) ?: return Component.empty()
-
-        val prefix = luckUser.cachedData.metaData.prefix
-            ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
-
-        return prefix.legacyDeserialize()
     }
 
     private fun Component.performReplacements(replacements: List<TextReplacementConfig>): Component =
