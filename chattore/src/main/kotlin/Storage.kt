@@ -6,7 +6,6 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.openredstone.chattore.feature.MailboxItem
 import org.openredstone.chattore.feature.NickPreset
-import org.openredstone.chattore.feature.ShowGlobalChatInBubble
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -153,11 +152,5 @@ class Storage(
         }.singleOrNull() ?: return@transaction null
         val jsonString = result[JsonSetting.value]
         Json.decodeFromString<T>(jsonString)
-    }
-
-    fun getAllGlobalChatEnabled(): Set<UUID> = transaction(database) {
-        JsonSetting.selectAll().where {
-            (JsonSetting.key eq ShowGlobalChatInBubble.key) and (JsonSetting.value eq Json.encodeToString(true))
-        }.map { UUID.fromString(it[JsonSetting.uuid]) }.toSet()
     }
 }

@@ -17,7 +17,7 @@ import net.kyori.adventure.text.event.HoverEvent
 import org.openredstone.chattore.*
 import java.util.UUID
 
-val ShowGlobalChatInBubble: Setting<Boolean> = Setting("showGlobalChatInBubble")
+private val ShowGlobalChatInBubble: Setting<Boolean> = Setting("showGlobalChatInBubble")
 private const val BUBBLE_OWNED: String = "bubble-owned"
 
 fun PluginScope.createBubbleFeature(
@@ -59,7 +59,7 @@ private class BubbleCommand(
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a Chat-Bubble!")
         bubbleManager.createBubble(sender.uniqueId)
-        messenger.setCacheDirty()
+        addExcluded(sender.uniqueId)
         sender.sendInfo("Successfully created Chat-Bubble!")
     }
 
@@ -85,12 +85,12 @@ private class BubbleCommand(
         val bubble = bubbleManager.getBubbleByPlayer(player)
             ?: throw ChattoreException("Target is not in a Chat-Bubble!")
 
-        if (sender.uniqueId !in bubble.invitedPlayers && bubble.isPrivate)
+        if (bubble.isPrivate && sender.uniqueId !in bubble.invitedPlayers)
             throw ChattoreException("You were not invited to the Chat-Bubble!")
 
         bubble.invitedPlayers.remove(sender.uniqueId)
         bubble.players.add(sender.uniqueId)
-        messenger.setCacheDirty()
+        addExcluded(sender.uniqueId)
         bubble.sendInfos(
             sender,
             "You successfully joined ${player.username}'s Chat-Bubble!",
@@ -101,7 +101,7 @@ private class BubbleCommand(
     @Subcommand("leave")
     fun leave(sender: Player, bubble: Bubble) {
         bubble.players.remove(sender.uniqueId)
-        messenger.setCacheDirty()
+        removeExcluded(sender.uniqueId)
         sender.sendInfo("You successfully left the Chat-Bubble!")
         if (bubble.players.isEmpty()) {
             bubbleManager.removeBubble(bubble)
@@ -123,8 +123,8 @@ private class BubbleCommand(
             "You popped the the Chat-Bubble!",
             "${sender.username} popped your Chat-Bubble!",
         )
+        messenger.excludedFromGlobalChat.removeAll(bubble.players)
         bubbleManager.removeBubble(bubble)
-        messenger.setCacheDirty()
     }
 
     @Subcommand("kick")
@@ -134,7 +134,7 @@ private class BubbleCommand(
             throw ChattoreException("You cannot kick yourself!")
 
         bubble.players.remove(player.uniqueId)
-        messenger.setCacheDirty()
+        removeExcluded(player.uniqueId)
         player.sendInfo("You were kicked out of the Chat-Bubble!")
         bubble.sendInfos(
             sender,
@@ -184,8 +184,8 @@ private class BubbleCommand(
         val bubble = bubbleManager.getBubbleByPlayer(player)
             ?: throw ChattoreException("Target is not in a Chat-Bubble!")
         bubble.broadcastInfo("The Chat-Bubble was burst by ${sender.username}!")
+        messenger.excludedFromGlobalChat.removeAll(bubble.players)
         bubbleManager.removeBubble(bubble)
-        messenger.setCacheDirty()
         sender.sendInfo("You successfully burst ${player.username}'s Chat-Bubble!")
     }
 
@@ -193,7 +193,13 @@ private class BubbleCommand(
     @CommandCompletion("true|false")
     fun seeGlobalChat(sender: Player, boolean: Boolean) {
         database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, boolean)
-        messenger.setCacheDirty()
+        if (boolean) {
+            messenger.excludedFromGlobalChat.remove(sender.uniqueId)
+        } else {
+            if (bubbleManager.getBubbleByPlayer(sender) != null) {
+                messenger.excludedFromGlobalChat.add(sender.uniqueId)
+            }
+        }
         sender.sendInfo(
             if (boolean) "You will now see global chat inside your Chat-Bubble!"
             else "You won't see global chat inside your Chat-Bubble anymore!"
@@ -211,6 +217,16 @@ private class BubbleCommand(
         players.forEach { uuid ->
             proxy.playerOrNull(uuid)?.sendInfo(message)
         }
+    }
+
+    private fun addExcluded(uuid: UUID) {
+        if (database.getSetting(ShowGlobalChatInBubble, uuid) != true) {
+            messenger.excludedFromGlobalChat.add(uuid)
+        }
+    }
+
+    private fun removeExcluded(uuid: UUID) {
+        messenger.excludedFromGlobalChat.remove(uuid)
     }
 }
 

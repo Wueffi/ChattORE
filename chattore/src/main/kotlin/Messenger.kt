@@ -13,18 +13,18 @@ import net.luckperms.api.LuckPerms
 import org.openredstone.chattore.feature.*
 import java.net.URI
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 fun PluginScope.createMessenger(
     emojis: Emojis,
     database: Storage,
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
-    getBubbleManager: () -> BubbleManager,
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, getBubbleManager)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap)
 }
 
 class Messenger(
@@ -33,8 +33,7 @@ class Messenger(
     private val database: Storage,
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
-    private val fileTypeMap: Map<String, List<String>>,
-    private val getBubbleManager: () -> BubbleManager,
+    private val fileTypeMap: Map<String, List<String>>
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -45,8 +44,7 @@ class Messenger(
         formatReplacement("~~", "st"),
         buildEmojiReplacement(emojis),
     )
-    private var excludedCache: Set<UUID> = emptySet()
-    private var cacheDirty: Boolean = true
+    val excludedFromGlobalChat: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
 
     private fun formatReplacement(key: String, tag: String): TextReplacementConfig =
         TextReplacementConfig.builder()
@@ -85,11 +83,8 @@ class Messenger(
 
     fun broadcastChatMessage(originServer: String, player: Player, message: String) {
         val (sender, compoPrefix) = senderAndPrefix(player)
-        if (cacheDirty) {
-            rebuildExcludedCache()
-        }
 
-        proxy.allPlayers.filter { it.uniqueId !in excludedCache }.forEach {
+        proxy.allPlayers.filter { it.uniqueId !in excludedFromGlobalChat }.forEach {
             it.sendRichMessage(
                 formatConfig.global,
                 "message" toC prepareChatMessage(message, player),
@@ -166,18 +161,6 @@ class Messenger(
             "[$symbol $name]" +
             "</hover>" +
             "</click><reset>").render()
-    }
-
-    fun rebuildExcludedCache() {
-        val bubbleExcluded = getBubbleManager().getBubbles().flatMap { it.players }.toMutableSet()
-        bubbleExcluded.removeAll(database.getAllGlobalChatEnabled())
-
-        excludedCache = bubbleExcluded
-        cacheDirty = false
-    }
-
-    fun setCacheDirty() {
-        cacheDirty = true
     }
 
     private fun Component.performReplacements(replacements: List<TextReplacementConfig>): Component =
