@@ -26,10 +26,9 @@ fun PluginScope.createChatFeature(
     bubbleManager: BubbleManager
 ) {
     val flaggedMessages = ConcurrentHashMap<UUID, String>()
-    val shoutingPlayers = ConcurrentHashMap.newKeySet<UUID>()
     registerCommands(ConfirmMessage(flaggedMessages, logger, messenger))
-    registerCommands(Shout(proxy, shoutingPlayers))
-    registerListeners(ChatListener(config, flaggedMessages, logger, messenger, bubbleManager, shoutingPlayers))
+    val chatListener = ChatListener(config, flaggedMessages, logger, messenger, bubbleManager)
+    registerCommands(Shout(chatListener))
 }
 
 private class ChatListener(
@@ -37,8 +36,7 @@ private class ChatListener(
     private val flaggedMessages: ConcurrentHashMap<UUID, String>,
     private val logger: Logger,
     private val messenger: Messenger,
-    private val bubbleManager: BubbleManager,
-    private val shoutingPlayers: MutableSet<UUID>,
+    private val bubbleManager: BubbleManager
 ) {
 
     private val regexes = config.regexes.mapNotNull { pattern ->
@@ -51,14 +49,16 @@ private class ChatListener(
     fun onChatEvent(event: PlayerChatEvent) {
         val player = event.player
         val message = event.message
+        handleChat(player, message, bubbleManager.getBubbleByPlayer(player))
+    }
+
+    fun handleChat(player: Player, message: String, bubble: Bubble?) {
         if (isFlagged(player, message)) return
         logger.info("${player.username} (${player.uniqueId}): $message")
         player.currentServer.ifPresent { server ->
-            val bubble = bubbleManager.getBubbleByPlayer(player)
-            if (bubble != null && player.uniqueId !in shoutingPlayers) {
+            if (bubble != null) {
                 messenger.broadcastBubbleMessage(player, message, bubble)
             } else {
-                shoutingPlayers.remove(player.uniqueId)
                 messenger.broadcastChatMessage(server.serverInfo.name, player, message)
             }
         }
@@ -106,12 +106,10 @@ private class ConfirmMessage(
 @CommandAlias("shout")
 @CommandPermission("chattore.bubble")
 private class Shout(
-    private val proxy: ProxyServer,
-    private val shoutingPlayers: MutableSet<UUID>,
+    private val chatListener: ChatListener,
 ) : BaseCommand() {
     @Default
     fun shout(sender: Player, message: String) {
-        shoutingPlayers.add(sender.uniqueId)
-        proxy.eventManager.fireAndForget(PlayerChatEvent(sender, message))
+        chatListener.handleChat(sender, message, bubble = null) // passing bubble = null to shout
     }
 }

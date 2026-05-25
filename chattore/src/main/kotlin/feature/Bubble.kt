@@ -101,7 +101,7 @@ private class BubbleCommand(
     @Subcommand("leave")
     fun leave(sender: Player, bubble: Bubble) {
         bubble.players.remove(sender.uniqueId)
-        removeExcluded(sender.uniqueId)
+        messenger.excludedFromGlobalChat.remove(sender.uniqueId)
         sender.sendInfo("You successfully left the Chat-Bubble!")
         if (bubble.players.isEmpty()) {
             bubbleManager.removeBubble(bubble)
@@ -134,7 +134,7 @@ private class BubbleCommand(
             throw ChattoreException("You cannot kick yourself!")
 
         bubble.players.remove(player.uniqueId)
-        removeExcluded(player.uniqueId)
+        messenger.excludedFromGlobalChat.remove(player.uniqueId)
         player.sendInfo("You were kicked out of the Chat-Bubble!")
         bubble.sendInfos(
             sender,
@@ -191,9 +191,9 @@ private class BubbleCommand(
 
     @CommandAlias("showglobalchat|gc")
     @CommandCompletion("true|false")
-    fun seeGlobalChat(sender: Player, boolean: Boolean) {
-        database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, boolean)
-        if (boolean) {
+    fun seeGlobalChat(sender: Player, showGlobalChat: Boolean) {
+        database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, showGlobalChat)
+        if (showGlobalChat) {
             messenger.excludedFromGlobalChat.remove(sender.uniqueId)
         } else {
             if (bubbleManager.getBubbleByPlayer(sender) != null) {
@@ -201,7 +201,7 @@ private class BubbleCommand(
             }
         }
         sender.sendInfo(
-            if (boolean) "You will now see global chat inside your Chat-Bubble!"
+            if (showGlobalChat) "You will now see global chat inside your Chat-Bubble!"
             else "You won't see global chat inside your Chat-Bubble anymore!"
         )
     }
@@ -223,10 +223,6 @@ private class BubbleCommand(
         if (database.getSetting(ShowGlobalChatInBubble, uuid) != true) {
             messenger.excludedFromGlobalChat.add(uuid)
         }
-    }
-
-    private fun removeExcluded(uuid: UUID) {
-        messenger.excludedFromGlobalChat.remove(uuid)
     }
 }
 
