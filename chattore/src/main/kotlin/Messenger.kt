@@ -10,7 +10,10 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextReplacementConfig
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
-import org.openredstone.chattore.feature.*
+import org.openredstone.chattore.feature.Bubble
+import org.openredstone.chattore.feature.DiscordBroadcastEvent
+import org.openredstone.chattore.feature.Emojis
+import org.openredstone.chattore.feature.NickPreset
 import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -33,7 +36,7 @@ class Messenger(
     private val database: Storage,
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
-    private val fileTypeMap: Map<String, List<String>>
+    private val fileTypeMap: Map<String, List<String>>,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 

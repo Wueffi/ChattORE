@@ -7,7 +7,6 @@ import co.aikar.commands.annotation.Default
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.player.PlayerChatEvent
 import com.velocitypowered.api.proxy.Player
-import com.velocitypowered.api.proxy.ProxyServer
 import org.openredstone.chattore.ChattoreException
 import org.openredstone.chattore.Messenger
 import org.openredstone.chattore.PluginScope
@@ -23,7 +22,7 @@ data class ChatConfirmationConfig(
 fun PluginScope.createChatFeature(
     messenger: Messenger,
     config: ChatConfirmationConfig,
-    bubbleManager: BubbleManager
+    bubbleManager: BubbleManager,
 ) {
     val flaggedMessages = ConcurrentHashMap<UUID, String>()
     registerCommands(ConfirmMessage(flaggedMessages, logger, messenger))
@@ -36,7 +35,7 @@ private class ChatListener(
     private val flaggedMessages: ConcurrentHashMap<UUID, String>,
     private val logger: Logger,
     private val messenger: Messenger,
-    private val bubbleManager: BubbleManager
+    private val bubbleManager: BubbleManager,
 ) {
 
     private val regexes = config.regexes.mapNotNull { pattern ->

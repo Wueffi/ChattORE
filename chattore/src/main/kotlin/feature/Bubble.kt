@@ -2,12 +2,7 @@ package org.openredstone.chattore.feature
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.InvalidCommandArgument
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.CommandCompletion
-import co.aikar.commands.annotation.CommandPermission
-import co.aikar.commands.annotation.Flags
-import co.aikar.commands.annotation.Single
-import co.aikar.commands.annotation.Subcommand
+import co.aikar.commands.annotation.*
 import co.aikar.commands.velocity.contexts.OnlinePlayer
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
@@ -15,7 +10,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.event.HoverEvent
 import org.openredstone.chattore.*
-import java.util.UUID
+import java.util.*
 
 private val ShowGlobalChatInBubble: Setting<Boolean> = Setting("showGlobalChatInBubble")
 private const val BUBBLE_OWNED: String = "bubble-owned"
@@ -50,7 +45,7 @@ private class BubbleCommand(
     private val messenger: Messenger,
     private val proxy: ProxyServer,
     private var database: Storage,
-    private var bubbleManager: BubbleManager
+    private var bubbleManager: BubbleManager,
 ) : BaseCommand() {
 
     @Subcommand("create")
@@ -230,7 +225,7 @@ class Bubble(
     var owner: UUID,
     val players: MutableSet<UUID>,
     val invitedPlayers: MutableSet<UUID>,
-    var isPrivate: Boolean
+    var isPrivate: Boolean,
 )
 
 class BubbleManager {
