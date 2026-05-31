@@ -12,8 +12,8 @@ import net.kyori.adventure.text.event.HoverEvent
 import org.openredstone.chattore.*
 import java.util.*
 
-private val ShowGlobalChatInBubble: Setting<Boolean> = Setting("showGlobalChatInBubble")
-private const val BUBBLE_OWNED: String = "bubble-owned"
+private val ShowGlobalChatInBubble = Setting<Boolean>("showGlobalChatInBubble")
+private const val BUBBLE_OWNED = "bubble-owned"
 
 fun PluginScope.createBubbleFeature(
     messenger: Messenger,
@@ -59,8 +59,8 @@ private class BubbleCommand(
     }
 
     @Subcommand("invite")
-    fun invite(sender: Player, bubble: Bubble, @Single target: OnlinePlayer) {
-        val player: Player = target.player
+    fun invite(sender: Player, bubble: Bubble, target: OnlinePlayer) {
+        val player = target.player
         if (player.uniqueId in bubble.invitedPlayers)
             throw ChattoreException("${player.username} is already invited!")
         if (player.uniqueId in bubble.players)
@@ -72,11 +72,11 @@ private class BubbleCommand(
     }
 
     @Subcommand("join")
-    fun join(sender: Player, @Single target: OnlinePlayer) {
+    fun join(sender: Player, target: OnlinePlayer) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a Chat-Bubble!")
 
-        val player: Player = target.player
+        val player = target.player
         val bubble = bubbleManager.getBubbleByPlayer(player)
             ?: throw ChattoreException("Target is not in a Chat-Bubble!")
 
@@ -123,8 +123,8 @@ private class BubbleCommand(
     }
 
     @Subcommand("kick")
-    fun kick(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, @Single target: OnlinePlayer) {
-        val player: Player = target.player
+    fun kick(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, target: OnlinePlayer) {
+        val player = target.player
         if (player.uniqueId == sender.uniqueId)
             throw ChattoreException("You cannot kick yourself!")
 
@@ -174,8 +174,8 @@ private class BubbleCommand(
     @Subcommand("forcedelete")
     @CommandAlias("burst")
     @CommandPermission("chattore.bubble.manage")
-    fun forcedelete(sender: Player, @Single target: OnlinePlayer) {
-        val player: Player = target.player
+    fun forcedelete(sender: Player, target: OnlinePlayer) {
+        val player = target.player
         val bubble = bubbleManager.getBubbleByPlayer(player)
             ?: throw ChattoreException("Target is not in a Chat-Bubble!")
         bubble.broadcastInfo("The Chat-Bubble was burst by ${sender.username}!")
