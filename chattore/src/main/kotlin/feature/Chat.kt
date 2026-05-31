@@ -25,9 +25,9 @@ fun PluginScope.createChatFeature(
     bubbleManager: BubbleManager,
 ) {
     val flaggedMessages = ConcurrentHashMap<UUID, String>()
-    registerCommands(ConfirmMessage(flaggedMessages, logger, messenger))
     val chatListener = ChatListener(config, flaggedMessages, logger, messenger, bubbleManager)
-    registerCommands(Shout(chatListener))
+    registerListeners(chatListener)
+    registerCommands(ConfirmMessage(flaggedMessages, logger, messenger), Shout(chatListener))
 }
 
 private class ChatListener(
