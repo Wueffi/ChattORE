@@ -27,9 +27,7 @@ fun PluginScope.createBubbleFeature(
             val bubble = bubbleManager.getBubbleByPlayer(sender)
                 ?: throw InvalidCommandArgument("You are not in a Chat-Bubble!")
             if (ctx.hasFlag(BUBBLE_OWNED) && bubble.owner != sender.uniqueId) {
-                val ownerName = proxy.getPlayer(bubble.owner)
-                    .map { it.username }
-                    .orElse(bubble.owner.toString())
+                val ownerName = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
                 throw InvalidCommandArgument("You are not the owner of this Chat-Bubble! ($ownerName is.)")
             }
             bubble
@@ -159,10 +157,10 @@ private class BubbleCommand(
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
         for (bubble in bubbleManager.getBubbles()) {
             val playersString = bubble.players
-                .mapNotNull { uuid -> proxy.getPlayer(uuid).orElse(null)?.username }
+                .mapNotNull { uuid -> proxy.playerOrNull(uuid)?.username }
                 .joinToString(", ")
             val firstPlayer = bubble.players.firstOrNull()
-                ?.let { proxy.getPlayer(it).orElse(null)?.username }
+                ?.let { proxy.playerOrNull(it)?.username }
             sender.sendMessage(
                 Component.text("$playersString <gray>|</gray> <gray>[</gray><green>Join</green><gray>]</gray>")
                     .clickEvent(ClickEvent.suggestCommand("/bubble join $firstPlayer"))
@@ -190,10 +188,8 @@ private class BubbleCommand(
         database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, showGlobalChat)
         if (showGlobalChat) {
             messenger.excludedFromGlobalChat.remove(sender.uniqueId)
-        } else {
-            if (bubbleManager.getBubbleByPlayer(sender) != null) {
-                messenger.excludedFromGlobalChat.add(sender.uniqueId)
-            }
+        } else if (bubbleManager.getBubbleByPlayer(sender) != null) {
+            messenger.excludedFromGlobalChat.add(sender.uniqueId)
         }
         sender.sendInfo(
             if (showGlobalChat) "You will now see global chat inside your Chat-Bubble!"
