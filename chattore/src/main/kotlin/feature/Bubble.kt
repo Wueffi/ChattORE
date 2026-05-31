@@ -156,16 +156,13 @@ private class BubbleCommand(
         }
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
         for (bubble in bubbleManager.bubbles) {
-            val playersString = bubble.players
-                .mapNotNull { uuid -> proxy.playerOrNull(uuid)?.username }
-                .joinToString(", ")
             val owner = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
             val joinButton = "<gray>[</gray><green>Join</green><gray>]</gray>".render()
                 .clickEvent(ClickEvent.suggestCommand("/bubble join $owner"))
                 .hoverEvent(HoverEvent.showText(Component.text("Click to join bubble")))
             sender.sendMessage(
                 Component.textOfChildren(
-                    Component.text(playersString),
+                    Component.text(bubble.playersString(proxy)),
                     " <gray>|</gray> ".render(),
                     joinButton,
                 )
@@ -226,7 +223,14 @@ class Bubble(
     val players: MutableSet<UUID>,
     val invitedPlayers: MutableSet<UUID>,
     var isPrivate: Boolean,
-)
+) {
+    fun playersString(proxy: ProxyServer) = players
+        .mapNotNull { uuid -> proxy.playerOrNull(uuid)?.username }
+        .joinToString(", ")
+
+    fun formatInfo(proxy: ProxyServer) =
+        HoverEvent.showText(Component.text("In a bubble with: ${playersString(proxy)}"))
+}
 
 class BubbleManager {
     private val _bubbles: MutableList<Bubble> = mutableListOf()

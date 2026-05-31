@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextReplacementConfig
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
 import org.openredstone.chattore.feature.Bubble
@@ -114,6 +115,7 @@ class Messenger(
                 "message" toC prepareChatMessage(message, player),
                 "sender" toC sender,
                 "prefix" toC compoPrefix,
+                Placeholder.styling("bubbleinfo", bubble.formatInfo(proxy)),
             )
         }
     }

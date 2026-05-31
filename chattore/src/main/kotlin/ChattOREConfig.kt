@@ -18,7 +18,7 @@ data class FormatConfig(
     val global: String = "<prefix> <gray>|</gray> <sender><gray>:</gray> <message>",
     val join: String = "<yellow><player> has joined the network",
     val leave: String = "<yellow><player> has left the network",
-    val bubbleChat: String = "<gray>[</gray><gold>B</gold><gray>]</gray> <prefix> <gray>|</gray> <sender><gray>:</gray> <message>",
+    val bubbleChat: String = "<bubbleinfo><gray>[</gray><gold>B</gold><gray>]</gray></bubbleinfo> <prefix> <gray>|</gray> <sender><gray>:</gray> <message>",
     val joinDiscord: String = "**%player% has joined the network**",
     val leaveDiscord: String = "**%player% has left the network**",
 )
