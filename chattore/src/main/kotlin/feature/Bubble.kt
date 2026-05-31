@@ -25,10 +25,12 @@ fun PluginScope.createBubbleFeature(
             val sender = ctx.sender as? Player
                 ?: throw InvalidCommandArgument("This command can only be used by players!")
             val bubble = bubbleManager.getBubbleByPlayer(sender)
-                ?: throw InvalidCommandArgument("You are not in a Chat-Bubble!")
+                ?: throw InvalidCommandArgument("You are not in a bubble!")
             if (ctx.hasFlag(BUBBLE_OWNED) && bubble.owner != sender.uniqueId) {
                 val ownerName = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
-                throw InvalidCommandArgument("You are not the owner of this Chat-Bubble! ($ownerName is.)")
+                throw InvalidCommandArgument(
+                    "You must be the owner of the bubble to use this command. (Current owner: $ownerName)"
+                )
             }
             bubble
         }
@@ -50,10 +52,10 @@ private class BubbleCommand(
     @CommandAlias("blow")
     fun create(sender: Player) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
-            throw ChattoreException("You are already in a Chat-Bubble!")
+            throw ChattoreException("You are already in a bubble!")
         bubbleManager.createBubble(sender.uniqueId)
         addExcluded(sender.uniqueId)
-        sender.sendInfo("Successfully created Chat-Bubble!")
+        sender.sendInfo("Bubble created.")
     }
 
     @Subcommand("invite")
@@ -62,32 +64,32 @@ private class BubbleCommand(
         if (player.uniqueId in bubble.invitedPlayers)
             throw ChattoreException("${player.username} is already invited!")
         if (player.uniqueId in bubble.players)
-            throw ChattoreException("${player.username} is already in the Chat-Bubble!")
+            throw ChattoreException("${player.username} is already in the bubble!")
 
         bubble.invitedPlayers.add(player.uniqueId)
-        sender.sendInfo("Successfully invited ${player.username}!")
-        player.sendInfo("${sender.username} invited you to their Chat-Bubble!")
+        sender.sendInfo("Invited ${player.username}.")
+        player.sendInfo("${sender.username} invited you to their bubble.")
     }
 
     @Subcommand("join")
     fun join(sender: Player, target: OnlinePlayer) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
-            throw ChattoreException("You are already in a Chat-Bubble!")
+            throw ChattoreException("You are already in a bubble!")
 
         val player = target.player
         val bubble = bubbleManager.getBubbleByPlayer(player)
-            ?: throw ChattoreException("Target is not in a Chat-Bubble!")
+            ?: throw ChattoreException("${player.username} is not in a bubble!")
 
         if (bubble.isPrivate && sender.uniqueId !in bubble.invitedPlayers)
-            throw ChattoreException("You were not invited to the Chat-Bubble!")
+            throw ChattoreException("You are not invited to the bubble!")
 
         bubble.invitedPlayers.remove(sender.uniqueId)
         bubble.players.add(sender.uniqueId)
         addExcluded(sender.uniqueId)
         bubble.sendInfos(
             sender,
-            "You successfully joined ${player.username}'s Chat-Bubble!",
-            "${sender.username} joined your Chat-Bubble!",
+            "You joined ${player.username}'s bubble.",
+            "${sender.username} joined the bubble.",
         )
     }
 
@@ -95,17 +97,17 @@ private class BubbleCommand(
     fun leave(sender: Player, bubble: Bubble) {
         bubble.players.remove(sender.uniqueId)
         messenger.excludedFromGlobalChat.remove(sender.uniqueId)
-        sender.sendInfo("You successfully left the Chat-Bubble!")
+        sender.sendInfo("You left the bubble.")
         if (bubble.players.isEmpty()) {
             bubbleManager.removeBubble(bubble)
             return
         }
+        bubble.broadcastInfo("${sender.username} left the bubble.")
         if (bubble.owner == sender.uniqueId) {
             val newOwner = bubble.players.first()
             bubble.owner = newOwner
-            proxy.playerOrNull(newOwner)?.sendInfo("You are now the owner of the Chat-Bubble!")
+            proxy.playerOrNull(newOwner)?.sendInfo("You are now the owner of the bubble.")
         }
-        bubble.broadcastInfo("${sender.username} left your Chat-Bubble!")
     }
 
     @Subcommand("delete")
@@ -113,8 +115,8 @@ private class BubbleCommand(
     fun delete(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble) {
         bubble.sendInfos(
             sender,
-            "You popped the the Chat-Bubble!",
-            "${sender.username} popped your Chat-Bubble!",
+            "You popped the bubble.",
+            "${sender.username} popped the bubble.",
         )
         messenger.excludedFromGlobalChat.removeAll(bubble.players)
         bubbleManager.removeBubble(bubble)
@@ -128,11 +130,11 @@ private class BubbleCommand(
 
         bubble.players.remove(player.uniqueId)
         messenger.excludedFromGlobalChat.remove(player.uniqueId)
-        player.sendInfo("You were kicked out of the Chat-Bubble!")
+        player.sendInfo("You were kicked out of the bubble.")
         bubble.sendInfos(
             sender,
-            "You kicked ${player.username} from the Chat-Bubble!",
-            "${sender.username} kicked ${player.username} from your Chat-Bubble!",
+            "You kicked ${player.username} from the bubble.",
+            "${sender.username} kicked ${player.username} from the bubble.",
         )
     }
 
@@ -143,15 +145,15 @@ private class BubbleCommand(
         val visibility = if (isPrivate) "private" else "public"
         bubble.sendInfos(
             sender,
-            "The Chat-Bubble is now $visibility!",
-            "${sender.username} set the Chat-Bubble to $visibility!",
+            "The bubble is now $visibility.",
+            "${sender.username} set the bubble to $visibility.",
         )
     }
 
     @Subcommand("list")
     fun list(sender: Player) {
         if (bubbleManager.bubbles.isEmpty()) {
-            sender.sendInfo("There are currently no Chat-Bubbles!")
+            sender.sendInfo("There are currently no bubbles.")
             return
         }
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
@@ -170,22 +172,21 @@ private class BubbleCommand(
         }
     }
 
-    @Subcommand("forcedelete")
-    @CommandAlias("burst")
+    @Subcommand("burst")
     @CommandPermission("chattore.bubble.manage")
-    fun forcedelete(sender: Player, target: OnlinePlayer) {
+    fun burst(sender: Player, target: OnlinePlayer) {
         val player = target.player
         val bubble = bubbleManager.getBubbleByPlayer(player)
-            ?: throw ChattoreException("Target is not in a Chat-Bubble!")
-        bubble.broadcastInfo("The Chat-Bubble was burst by ${sender.username}!")
+            ?: throw ChattoreException("${player.username} is not in a bubble!")
+        bubble.broadcastInfo("The bubble was burst by ${sender.username}.")
         messenger.excludedFromGlobalChat.removeAll(bubble.players)
         bubbleManager.removeBubble(bubble)
-        sender.sendInfo("You successfully burst ${player.username}'s Chat-Bubble!")
+        sender.sendInfo("You burst ${player.username}'s bubble.")
     }
 
     @CommandAlias("showglobalchat|gc")
     @CommandCompletion("true|false")
-    fun seeGlobalChat(sender: Player, showGlobalChat: Boolean) {
+    fun showGlobalChat(sender: Player, showGlobalChat: Boolean) {
         database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, showGlobalChat)
         if (showGlobalChat) {
             messenger.excludedFromGlobalChat.remove(sender.uniqueId)
@@ -193,8 +194,8 @@ private class BubbleCommand(
             messenger.excludedFromGlobalChat.add(sender.uniqueId)
         }
         sender.sendInfo(
-            if (showGlobalChat) "You will now see global chat inside your Chat-Bubble!"
-            else "You won't see global chat inside your Chat-Bubble anymore!"
+            if (showGlobalChat) "You will now see global chat inside bubbles."
+            else "You will no longer see global chat inside bubbles."
         )
     }
 
@@ -229,7 +230,7 @@ class Bubble(
         .joinToString(", ")
 
     fun formatInfo(proxy: ProxyServer) =
-        HoverEvent.showText(Component.text("In a bubble with: ${playersString(proxy)}"))
+        HoverEvent.showText(Component.text("Bubble: ${playersString(proxy)}"))
 }
 
 class BubbleManager {
