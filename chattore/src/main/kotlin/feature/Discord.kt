@@ -60,7 +60,7 @@ fun PluginScope.createDiscordFeature(
     val textChannel = discordNetwork.getTextChannelById(config.channelId).getOrNull()
         ?: throw ChattoreException("Cannot find Discord channel")
     textChannel.addMessageCreateListener(
-        DiscordListener(logger, messenger, proxy, emojis, config)
+        DiscordListener(logger, messenger, emojis, config)
     )
     registerListeners(DiscordBroadcastListener(config, discordMap, discordNetwork))
 }
@@ -99,7 +99,6 @@ private class DiscordBroadcastListener(
 private class DiscordListener(
     private val logger: Logger,
     private val messenger: Messenger,
-    private val proxy: ProxyServer,
     private val emojis: Emojis,
     private val config: DiscordConfig,
 ) : MessageCreateListener {
@@ -124,7 +123,7 @@ private class DiscordListener(
             val url = matchResult.groupValues[2].trim()
             "$text: $url"
         }.replace("""\s+""".toRegex(), " ")
-        proxy.all.sendRichMessage(
+        messenger.globalChatReceivers.sendRichMessage(
             config.ingameFormat,
             "sender" toS event.messageAuthor.displayName,
             "message" toC messenger.prepareChatMessage(transformedMessage, null),

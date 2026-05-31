@@ -85,17 +85,17 @@ class Messenger(
         return sender to prefix.legacyDeserialize()
     }
 
+    val globalChatReceivers = proxy.all { it.uniqueId !in excludedFromGlobalChat }
+
     fun broadcastChatMessage(originServer: String, player: Player, message: String) {
         val (sender, compoPrefix) = senderAndPrefix(player)
 
-        proxy.allPlayers.filter { it.uniqueId !in excludedFromGlobalChat }.forEach {
-            it.sendRichMessage(
-                formatConfig.global,
-                "message" toC prepareChatMessage(message, player),
-                "sender" toC sender,
-                "prefix" toC compoPrefix,
-            )
-        }
+        globalChatReceivers.sendRichMessage(
+            formatConfig.global,
+            "message" toC prepareChatMessage(message, player),
+            "sender" toC sender,
+            "prefix" toC compoPrefix,
+        )
 
         val plainPrefix = PlainTextComponentSerializer.plainText().serialize(compoPrefix)
         val discordBroadcast = DiscordBroadcastEvent(
