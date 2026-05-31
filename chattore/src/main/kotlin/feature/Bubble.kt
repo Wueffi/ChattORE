@@ -150,12 +150,12 @@ private class BubbleCommand(
 
     @Subcommand("list")
     fun list(sender: Player) {
-        if (bubbleManager.getBubbles().isEmpty()) {
+        if (bubbleManager.bubbles.isEmpty()) {
             sender.sendInfo("There are currently no Chat-Bubbles!")
             return
         }
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
-        for (bubble in bubbleManager.getBubbles()) {
+        for (bubble in bubbleManager.bubbles) {
             val playersString = bubble.players
                 .mapNotNull { uuid -> proxy.playerOrNull(uuid)?.username }
                 .joinToString(", ")
@@ -225,21 +225,18 @@ class Bubble(
 )
 
 class BubbleManager {
-    private val bubbles: MutableList<Bubble> = mutableListOf()
-
-    fun getBubbles(): List<Bubble> {
-        return bubbles
-    }
+    private val _bubbles: MutableList<Bubble> = mutableListOf()
+    val bubbles: List<Bubble> get() = _bubbles
 
     fun createBubble(player: UUID) {
-        bubbles.add(Bubble(player, mutableSetOf(player), mutableSetOf(), false))
+        _bubbles.add(Bubble(player, mutableSetOf(player), mutableSetOf(), false))
     }
 
     fun removeBubble(bubble: Bubble) {
-        bubbles.remove(bubble)
+        _bubbles.remove(bubble)
     }
 
     fun getBubbleByPlayer(player: Player): Bubble? {
-        return bubbles.firstOrNull { player.uniqueId in it.players }
+        return _bubbles.firstOrNull { player.uniqueId in it.players }
     }
 }
