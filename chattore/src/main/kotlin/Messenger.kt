@@ -92,7 +92,7 @@ class Messenger(
                 formatConfig.global,
                 "message" toC prepareChatMessage(message, player),
                 "sender" toC sender,
-                "prefix" toC compoPrefix
+                "prefix" toC compoPrefix,
             )
         }
 
