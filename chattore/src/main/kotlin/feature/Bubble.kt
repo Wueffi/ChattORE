@@ -29,7 +29,7 @@ fun PluginScope.createBubbleFeature(
             if (ctx.hasFlag(BUBBLE_OWNED) && bubble.owner != sender.uniqueId) {
                 val ownerName = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
                 throw InvalidCommandArgument(
-                    "You must be the owner of the bubble to use this command. (Current owner: $ownerName)"
+                    "You must be the owner of the bubble to use this command. (Current owner: $ownerName)",
                 )
             }
             bubble
@@ -68,7 +68,9 @@ private class BubbleCommand(
 
         bubble.invitedPlayers.add(player.uniqueId)
         sender.sendInfo("Invited ${player.username}.")
-        player.sendInfo("${sender.username} invited you to their bubble.")
+        player.sendInfoC(
+            "${sender.username} invited you to their bubble. ".toComponent().append(bubble.joinButton(proxy)),
+        )
     }
 
     @Subcommand("join")
@@ -158,15 +160,11 @@ private class BubbleCommand(
         }
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
         for (bubble in bubbleManager.bubbles) {
-            val owner = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
-            val joinButton = "<gray>[</gray><green>Join</green><gray>]</gray>".render()
-                .clickEvent(ClickEvent.suggestCommand("/bubble join $owner"))
-                .hoverEvent(HoverEvent.showText(Component.text("Click to join bubble")))
             sender.sendMessage(
                 Component.textOfChildren(
                     Component.text(bubble.playersString(proxy)),
                     " <gray>|</gray> ".render(),
-                    joinButton,
+                    bubble.joinButton(proxy),
                 )
             )
         }
@@ -231,6 +229,13 @@ class Bubble(
 
     fun formatInfo(proxy: ProxyServer) =
         HoverEvent.showText(Component.text("Bubble: ${playersString(proxy)}"))
+
+    fun joinButton(proxy: ProxyServer): Component {
+        val ownerName = proxy.playerOrNull(owner)?.username ?: owner.toString()
+        return "<gray>[</gray><green>Join</green><gray>]</gray>".render()
+            .clickEvent(ClickEvent.runCommand("/bubble join $ownerName"))
+            .hoverEvent(HoverEvent.showText(Component.text("Click to join bubble")))
+    }
 }
 
 class BubbleManager {
