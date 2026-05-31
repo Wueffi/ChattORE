@@ -159,12 +159,16 @@ private class BubbleCommand(
             val playersString = bubble.players
                 .mapNotNull { uuid -> proxy.playerOrNull(uuid)?.username }
                 .joinToString(", ")
-            val firstPlayer = bubble.players.firstOrNull()
-                ?.let { proxy.playerOrNull(it)?.username }
+            val owner = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
+            val joinButton = "<gray>[</gray><green>Join</green><gray>]</gray>".render()
+                .clickEvent(ClickEvent.suggestCommand("/bubble join $owner"))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to join bubble")))
             sender.sendMessage(
-                Component.text("$playersString <gray>|</gray> <gray>[</gray><green>Join</green><gray>]</gray>")
-                    .clickEvent(ClickEvent.suggestCommand("/bubble join $firstPlayer"))
-                    .hoverEvent(HoverEvent.showText(Component.text("Click to join bubble")))
+                Component.textOfChildren(
+                    Component.text(playersString),
+                    " <gray>|</gray> ".render(),
+                    joinButton,
+                )
             )
         }
     }
