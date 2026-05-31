@@ -244,7 +244,5 @@ class BubbleManager {
         _bubbles.remove(bubble)
     }
 
-    fun getBubbleByPlayer(player: Player): Bubble? {
-        return _bubbles.firstOrNull { player.uniqueId in it.players }
-    }
+    fun getBubbleByPlayer(player: Player): Bubble? = _bubbles.firstOrNull { player.uniqueId in it.players }
 }
