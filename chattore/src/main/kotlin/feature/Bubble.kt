@@ -48,8 +48,7 @@ private class BubbleCommand(
     private var bubbleManager: BubbleManager,
 ) : BaseCommand() {
 
-    @Subcommand("create")
-    @CommandAlias("blow")
+    @Subcommand("create|blow")
     fun create(sender: Player) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a bubble!")
@@ -112,8 +111,7 @@ private class BubbleCommand(
         }
     }
 
-    @Subcommand("delete")
-    @CommandAlias("pop")
+    @Subcommand("delete|pop")
     fun delete(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble) {
         bubble.sendInfos(
             sender,
@@ -140,7 +138,7 @@ private class BubbleCommand(
         )
     }
 
-    @Subcommand("setPrivate")
+    @Subcommand("setprivate")
     @CommandCompletion("true|false")
     fun setPrivate(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, isPrivate: Boolean) {
         bubble.isPrivate = isPrivate
@@ -182,7 +180,7 @@ private class BubbleCommand(
         sender.sendInfo("You burst ${player.username}'s bubble.")
     }
 
-    @CommandAlias("showglobalchat|gc")
+    @Subcommand("showglobalchat|sgc")
     @CommandCompletion("true|false")
     fun showGlobalChat(sender: Player, showGlobalChat: Boolean) {
         database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, showGlobalChat)
