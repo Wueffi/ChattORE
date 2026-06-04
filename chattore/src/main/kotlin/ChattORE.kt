@@ -39,6 +39,8 @@ class ChattORE @Inject constructor(
         commandManager.apply {
             setDefaultExceptionHandler(::handleCommandException, false)
             commandCompletions.registerCompletion("username") { listOf(it.player.username) }
+            @Suppress("DEPRECATION")
+            enableUnstableAPI("help")
         }
         pluginScope.apply {
             val emojis = createEmojiFeature()

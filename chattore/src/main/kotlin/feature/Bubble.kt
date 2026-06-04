@@ -1,9 +1,11 @@
 package org.openredstone.chattore.feature
 
 import co.aikar.commands.BaseCommand
+import co.aikar.commands.CommandHelp
 import co.aikar.commands.InvalidCommandArgument
 import co.aikar.commands.annotation.*
 import co.aikar.commands.velocity.contexts.OnlinePlayer
+import com.velocitypowered.api.command.CommandSource
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import net.kyori.adventure.text.Component
@@ -34,6 +36,9 @@ fun PluginScope.createBubbleFeature(
             }
             bubble
         }
+        commandCompletions.registerStaticCompletion("boolean", arrayOf("true", "false"))
+        commandCompletions.setDefaultCompletion("boolean", Boolean::class.java)
+        commandCompletions.setDefaultCompletion("players", OnlinePlayer::class.java)
     }
     registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager))
     return bubbleManager
@@ -48,7 +53,16 @@ private class BubbleCommand(
     private var bubbleManager: BubbleManager,
 ) : BaseCommand() {
 
+    @CatchUnknown
+    @HelpCommand
+    @Subcommand("help")
+    fun help(sender: CommandSource, help: CommandHelp) {
+        sender.sendInfoMM("<b><gold>Bubble help")
+        help.showHelp()
+    }
+
     @Subcommand("create|blow")
+    @Description("Create (\"blow\") a bubble")
     fun create(sender: Player) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a bubble!")
@@ -58,6 +72,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("invite")
+    @Description("Invite a player to your bubble (if it is private)")
     fun invite(sender: Player, bubble: Bubble, target: OnlinePlayer) {
         val player = target.player
         if (player.uniqueId in bubble.invitedPlayers)
@@ -73,6 +88,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("join")
+    @Description("Join a player's bubble")
     fun join(sender: Player, target: OnlinePlayer) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a bubble!")
@@ -95,6 +111,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("leave")
+    @Description("Leave your current bubble")
     fun leave(sender: Player, bubble: Bubble) {
         bubble.players.remove(sender.uniqueId)
         messenger.excludedFromGlobalChat.remove(sender.uniqueId)
@@ -112,6 +129,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("delete|pop")
+    @Description("Delete (\"pop\") your own bubble")
     fun delete(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble) {
         bubble.sendInfos(
             sender,
@@ -123,6 +141,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("kick")
+    @Description("Kick a player from your own bubble")
     fun kick(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, target: OnlinePlayer) {
         val player = target.player
         if (player.uniqueId == sender.uniqueId)
@@ -139,7 +158,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("setprivate")
-    @CommandCompletion("true|false")
+    @Description("Set the visibility of your own bubble")
     fun setPrivate(sender: Player, @Flags(BUBBLE_OWNED) bubble: Bubble, isPrivate: Boolean) {
         bubble.isPrivate = isPrivate
         val visibility = if (isPrivate) "private" else "public"
@@ -151,6 +170,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("list")
+    @Description("List all bubbles")
     fun list(sender: Player) {
         if (bubbleManager.bubbles.isEmpty()) {
             sender.sendInfo("There are currently no bubbles.")
@@ -170,6 +190,7 @@ private class BubbleCommand(
 
     @Subcommand("burst")
     @CommandPermission("chattore.bubble.manage")
+    @Description("Burst (delete) someone's bubble")
     fun burst(sender: Player, target: OnlinePlayer) {
         val player = target.player
         val bubble = bubbleManager.getBubbleByPlayer(player)
@@ -181,7 +202,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("showglobalchat|sgc")
-    @CommandCompletion("true|false")
+    @Description("Toggle the visibility of global chat when inside a bubble")
     fun showGlobalChat(sender: Player, showGlobalChat: Boolean) {
         database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, showGlobalChat)
         if (showGlobalChat) {
