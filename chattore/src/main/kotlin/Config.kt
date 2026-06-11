@@ -107,7 +107,7 @@ private val bubbleIntroduction: Migration = {
     }
 }
 
-private val migrations = arrayOf<Migration>(
+private val migrations = arrayOf(
     removeUnnecessaryStuffAndReorganize,
     bubbleIntroduction,
 )

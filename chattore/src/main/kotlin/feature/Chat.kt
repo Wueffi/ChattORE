@@ -22,7 +22,7 @@ fun PluginScope.createChatFeature(
     bubbleManager: BubbleManager,
 ) {
     val confirmations = ChatConfirmations(config, logger)
-    val chatListener = ChatListener(confirmations, logger, messenger, bubbleManager)
+    val chatListener = ChatListener(confirmations, messenger, bubbleManager)
     registerListeners(chatListener)
     registerCommands(confirmations.ConfirmMessage(), Shout(chatListener))
 }
@@ -75,7 +75,6 @@ class ChatConfirmations(
 
 private class ChatListener(
     private val confirmations: ChatConfirmations,
-    private val logger: Logger,
     private val messenger: Messenger,
     private val bubbleManager: BubbleManager,
 ) {

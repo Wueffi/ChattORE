@@ -27,7 +27,7 @@ import kotlin.io.path.exists
 class ChattORE @Inject constructor(
     private val proxy: ProxyServer,
     private val logger: Logger,
-    @DataDirectory private val dataFolder: Path,
+    @param:DataDirectory private val dataFolder: Path,
 ) {
     @Subscribe
     fun onProxyInitialization(event: ProxyInitializeEvent) {
