@@ -20,6 +20,7 @@ private const val BUBBLE_OWNED = "bubble-owned"
 fun PluginScope.createBubbleFeature(
     messenger: Messenger,
     database: Storage,
+    chatConfirmations: ChatConfirmations,
 ): BubbleManager {
     val bubbleManager = BubbleManager()
     commandManager.apply {
@@ -40,7 +41,7 @@ fun PluginScope.createBubbleFeature(
         commandCompletions.setDefaultCompletion("boolean", Boolean::class.java)
         commandCompletions.setDefaultCompletion("players", OnlinePlayer::class.java)
     }
-    registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager))
+    registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager, chatConfirmations))
     return bubbleManager
 }
 
@@ -51,6 +52,7 @@ private class BubbleCommand(
     private val proxy: ProxyServer,
     private val database: Storage,
     private val bubbleManager: BubbleManager,
+    private val chatConfirmations: ChatConfirmations,
 ) : BaseCommand() {
 
     @CatchUnknown
@@ -202,7 +204,7 @@ private class BubbleCommand(
     }
 
     @Subcommand("showglobalchat|sgc")
-    @Description("Toggle the visibility of global chat when inside a bubble")
+    @Description("Control the visibility of global chat when in a bubble")
     fun showGlobalChat(sender: Player, showGlobalChat: Boolean) {
         database.setSetting(ShowGlobalChatInBubble, sender.uniqueId, showGlobalChat)
         if (showGlobalChat) {
@@ -211,9 +213,23 @@ private class BubbleCommand(
             messenger.excludedFromGlobalChat.add(sender.uniqueId)
         }
         sender.sendInfo(
-            if (showGlobalChat) "You will now see global chat inside bubbles."
-            else "You will no longer see global chat inside bubbles."
+            if (showGlobalChat) "You will now see global chat in bubbles."
+            else "You will no longer see global chat in bubbles."
         )
+    }
+
+    @CommandAlias("shout")
+    @Description("Send a message to global chat when in a bubble")
+    fun shout(sender: Player, message: String) {
+        chatConfirmations.submit(sender, message) {
+            messenger.broadcastChatMessage(sender, message)
+            if (sender.uniqueId in messenger.excludedFromGlobalChat) {
+                sender.sendSimpleC(
+                    "<hover:show_text:'You've disabled global chat in bubbles. You won't see if anyone responds.'><gray>[</gray>\uD83D\uDD15<gray>]</gray></hover> <message>",
+                    messenger.formatChatMessage(message, sender),
+                )
+            }
+        }
     }
 
     private fun Bubble.sendInfos(you: Player, yourMessage: String, theirMessage: String) {

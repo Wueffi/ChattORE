@@ -47,13 +47,10 @@ class ChattORE @Inject constructor(
             val userCache = createUserCache(database.database)
             val spies = createSpyingFeature(database)
             val messenger = createMessenger(emojis, database, luckPerms, config.format, spies)
-            val bubbleManager = createBubbleFeature(messenger, database)
+            val chatConfirmations = createChatConfirmations(ChatConfirmationConfig(config.regexes))
+            val bubbleManager = createBubbleFeature(messenger, database, chatConfirmations)
             createAliasFeature()
-            createChatFeature(
-                messenger,
-                ChatConfirmationConfig(config.regexes),
-                bubbleManager
-            )
+            createChatFeature(messenger, chatConfirmations, bubbleManager)
             createChattoreFeature()
             createDiscordFeature(messenger, emojis, config.discord)
             createFunCommandsFeature()

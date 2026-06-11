@@ -16,16 +16,8 @@ data class ChatConfirmationConfig(
     val regexes: List<String> = listOf(),
 )
 
-fun PluginScope.createChatFeature(
-    messenger: Messenger,
-    config: ChatConfirmationConfig,
-    bubbleManager: BubbleManager,
-) {
-    val confirmations = ChatConfirmations(config, logger)
-    val chatListener = ChatListener(confirmations, messenger, bubbleManager)
-    registerListeners(chatListener)
-    registerCommands(confirmations.ConfirmMessage(), Shout(chatListener))
-}
+fun PluginScope.createChatConfirmations(config: ChatConfirmationConfig): ChatConfirmations =
+    ChatConfirmations(config, logger).also { registerCommands(it.ConfirmMessage()) }
 
 class ChatConfirmations(
     config: ChatConfirmationConfig,
@@ -73,6 +65,14 @@ class ChatConfirmations(
     }
 }
 
+fun PluginScope.createChatFeature(
+    messenger: Messenger,
+    confirmations: ChatConfirmations,
+    bubbleManager: BubbleManager,
+) {
+    registerListeners(ChatListener(confirmations, messenger, bubbleManager))
+}
+
 private class ChatListener(
     private val confirmations: ChatConfirmations,
     private val messenger: Messenger,
@@ -84,30 +84,17 @@ private class ChatListener(
         val message = event.message
         val bubble = bubbleManager.getBubbleByPlayer(player)
         if (bubble == null) {
-            handleGlobalChat(player, message)
+            confirmations.submit(player, message) {
+                messenger.broadcastChatMessage(player, message)
+            }
             return
         }
         confirmations.submit(player, message) {
-            if (bubbleManager.getBubbleByPlayer(player) !== bubble) {
+            if (bubbleManager.getBubbleByPlayer(player) != bubble) {
                 player.sendError("You are no longer in the bubble you're trying to send a message to")
                 return@submit
             }
             messenger.broadcastBubbleMessage(player, message, bubble)
         }
-    }
-
-    fun handleGlobalChat(player: Player, message: String) = confirmations.submit(player, message) {
-        messenger.broadcastChatMessage(player, message)
-    }
-}
-
-@CommandAlias("shout")
-@CommandPermission("chattore.bubble")
-private class Shout(
-    private val chatListener: ChatListener,
-) : BaseCommand() {
-    @Default
-    fun shout(sender: Player, message: String) {
-        chatListener.handleGlobalChat(sender, message)
     }
 }

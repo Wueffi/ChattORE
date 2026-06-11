@@ -91,7 +91,7 @@ class Messenger(
             .renderSimpleC(name.render(player.username))
     }
 
-    private fun formatChatMessage(
+    fun formatChatMessage(
         message: String,
         player: Player,
         sender: Component = formatSender(player),
