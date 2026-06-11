@@ -24,50 +24,29 @@ fun PluginScope.createChatFeature(
     config: ChatConfirmationConfig,
     bubbleManager: BubbleManager,
 ) {
-    val flaggedMessages = ConcurrentHashMap<UUID, String>()
-    val chatListener = ChatListener(config, flaggedMessages, logger, messenger, bubbleManager)
+    val confirmations = ChatConfirmations(config, logger)
+    val chatListener = ChatListener(confirmations, logger, messenger, bubbleManager)
     registerListeners(chatListener)
-    registerCommands(ConfirmMessage(flaggedMessages, logger, messenger), Shout(chatListener))
+    registerCommands(confirmations.ConfirmMessage(), Shout(chatListener, confirmations))
 }
 
-private class ChatListener(
+class ChatConfirmations(
     config: ChatConfirmationConfig,
-    private val flaggedMessages: ConcurrentHashMap<UUID, String>,
     private val logger: Logger,
-    private val messenger: Messenger,
-    private val bubbleManager: BubbleManager,
 ) {
-
     private val regexes = config.regexes.mapNotNull { pattern ->
         runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }
             .onFailure { logger.error("Invalid regex $pattern: ${it.message}") }
             .getOrNull()
     }
 
-    @Subscribe
-    fun onChatEvent(event: PlayerChatEvent) {
-        val player = event.player
-        val message = event.message
-        handleChat(player, message, bubbleManager.getBubbleByPlayer(player))
-    }
-
-    fun handleChat(player: Player, message: String, bubble: Bubble?) {
-        if (isFlagged(player, message)) return
-        logger.info("${player.username} (${player.uniqueId}): $message")
-        player.currentServer.ifPresent { server ->
-            if (bubble != null) {
-                messenger.broadcastBubbleMessage(player, message, bubble)
-            } else {
-                messenger.broadcastChatMessage(server.serverInfo.name, player, message)
-            }
-        }
-    }
-
-    private fun isFlagged(player: Player, message: String): Boolean {
+    private val flags = ConcurrentHashMap<UUID, Pair<String, () -> Unit>>()
+    fun submit(player: Player, message: String, proceed: () -> Unit) {
         val matches = regexes.filter { it.containsMatchIn(message) }
         if (matches.isEmpty()) {
-            flaggedMessages.remove(player.uniqueId)
-            return false
+            flags.remove(player.uniqueId)
+            proceed()
+            return
         }
         fun String.highlight(r: Regex) = r.replace(this) { match -> "<red>${match.value}</red>" }
         val highlighted = matches.fold(message, String::highlight)
@@ -78,26 +57,53 @@ private class ChatListener(
                 "<gray>/confirmmessage<red>.",
             highlighted,
         )
-        flaggedMessages[player.uniqueId] = message
-        return true
+        flags[player.uniqueId] = message to proceed
+        return
+    }
+
+    @CommandAlias("confirmmessage")
+    @CommandPermission("chattore.confirmmessage")
+    inner class ConfirmMessage : BaseCommand() {
+        @Default
+        fun default(player: Player) {
+            val (message, proceed) = flags[player.uniqueId]
+                ?: throw ChattoreException("You have no message to confirm!")
+            player.sendRichMessage("<red>Override recognized")
+            flags.remove(player.uniqueId)
+            logger.info("${player.username} (${player.uniqueId}) FLAGGED MESSAGE OVERRIDE: $message")
+            proceed()
+        }
     }
 }
 
-@CommandAlias("confirmmessage")
-@CommandPermission("chattore.confirmmessage")
-private class ConfirmMessage(
-    private val flaggedMessages: ConcurrentHashMap<UUID, String>,
+private class ChatListener(
+    private val confirmations: ChatConfirmations,
     private val logger: Logger,
     private val messenger: Messenger,
-) : BaseCommand() {
-    @Default
-    fun default(player: Player) {
-        val message = flaggedMessages[player.uniqueId] ?: throw ChattoreException("You have no message to confirm!")
-        player.sendRichMessage("<red>Override recognized")
-        flaggedMessages.remove(player.uniqueId)
-        logger.info("${player.username} (${player.uniqueId}) FLAGGED MESSAGE OVERRIDE: $message")
+    private val bubbleManager: BubbleManager,
+) {
+    @Subscribe
+    fun onChatEvent(event: PlayerChatEvent) {
+        val player = event.player
+        val message = event.message
+        confirmations.submit(player, message) {
+            handleChat(player, message, bubbleManager.getBubbleByPlayer(player))
+        }
+    }
+
+    // NOTE: confirmations.submit is not done here in a single place so that we get
+    // the bubble the player is in *at the time of confirmation*, not when the message was sent,
+    // because otherwise you could leave (or be kicked) from your bubble and still send messages there
+    // if you had something to confirm. Ideally, you wouldn't be able to confirm that anymore, but this'll do for now
+    fun handleChat(player: Player, message: String, bubble: Bubble?) {
         player.currentServer.ifPresent { server ->
-            messenger.broadcastChatMessage(server.serverInfo.name, player, message)
+            if (bubble != null) {
+                logger.info("[Bubble] ${player.username} (${player.uniqueId}): $message")
+                messenger.broadcastBubbleMessage(player, message, bubble)
+            } else {
+                logger.info("${player.username} (${player.uniqueId}): $message")
+                messenger.broadcastChatMessage(server.serverInfo.name, player, message)
+            }
         }
     }
 }
@@ -106,9 +112,12 @@ private class ConfirmMessage(
 @CommandPermission("chattore.bubble")
 private class Shout(
     private val chatListener: ChatListener,
+    private val confirmations: ChatConfirmations,
 ) : BaseCommand() {
     @Default
     fun shout(sender: Player, message: String) {
-        chatListener.handleChat(sender, message, bubble = null) // passing bubble = null to shout
+        confirmations.submit(sender, message) {
+            chatListener.handleChat(sender, message, bubble = null)
+        }
     }
 }
