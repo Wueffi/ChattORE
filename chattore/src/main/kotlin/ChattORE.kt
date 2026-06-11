@@ -92,7 +92,7 @@ class ChattORE @Inject constructor(
         val exception = throwable as? ChattoreException ?: return false
         val message = exception.message ?: "Something went wrong!"
         // cast ok because we're running on Velocity
-        (sender as VelocityCommandIssuer).issuer.sendInfoMM("<red><message></red>", "message" toS message)
+        (sender as VelocityCommandIssuer).issuer.sendError(message)
         return true
     }
     // TODO reloading functionality
