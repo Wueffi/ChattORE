@@ -7,10 +7,7 @@ import co.aikar.commands.annotation.Default
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.player.PlayerChatEvent
 import com.velocitypowered.api.proxy.Player
-import org.openredstone.chattore.ChattoreException
-import org.openredstone.chattore.Messenger
-import org.openredstone.chattore.PluginScope
-import org.openredstone.chattore.sendSimpleMM
+import org.openredstone.chattore.*
 import org.slf4j.Logger
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -86,15 +83,16 @@ private class ChatListener(
     fun onChatEvent(event: PlayerChatEvent) {
         val player = event.player
         val message = event.message
+        val bubble = bubbleManager.getBubbleByPlayer(player)
         confirmations.submit(player, message) {
-            handleChat(player, message, bubbleManager.getBubbleByPlayer(player))
+            if (bubbleManager.getBubbleByPlayer(player) !== bubble) {
+                player.sendError("You are no longer in the bubble you're trying to send a message to")
+                return@submit
+            }
+            handleChat(player, message, bubble)
         }
     }
 
-    // NOTE: confirmations.submit is not done here in a single place so that we get
-    // the bubble the player is in *at the time of confirmation*, not when the message was sent,
-    // because otherwise you could leave (or be kicked) from your bubble and still send messages there
-    // if you had something to confirm. Ideally, you wouldn't be able to confirm that anymore, but this'll do for now
     fun handleChat(player: Player, message: String, bubble: Bubble?) {
         player.currentServer.ifPresent { server ->
             if (bubble != null) {
