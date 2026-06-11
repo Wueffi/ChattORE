@@ -49,8 +49,8 @@ fun PluginScope.createBubbleFeature(
 private class BubbleCommand(
     private val messenger: Messenger,
     private val proxy: ProxyServer,
-    private var database: Storage,
-    private var bubbleManager: BubbleManager,
+    private val database: Storage,
+    private val bubbleManager: BubbleManager,
 ) : BaseCommand() {
 
     @CatchUnknown

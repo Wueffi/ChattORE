@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextReplacementConfig
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
@@ -24,11 +25,12 @@ fun PluginScope.createMessenger(
     database: Storage,
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
+    spies: Audience,
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, spies)
 }
 
 class Messenger(
@@ -38,6 +40,7 @@ class Messenger(
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
+    private val spies: Audience,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -72,30 +75,35 @@ class Messenger(
             }
             .build()
 
-    private fun senderAndPrefix(player: Player): Pair<Component, Component> {
-        val userId = player.uniqueId
-        val name = database.getNickname(userId) ?: NickPreset(player.username)
-        val sender =
-            "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
-                .renderSimpleC(name.render(player.username))
-
-        val luckUser = luckPerms.userManager.getUser(userId)!! // online users guaranteed to be loaded
+    private fun formatPrefix(player: Player): Component {
+        val luckUser = luckPerms.userManager.getUser(player.uniqueId)!! // online users guaranteed to be loaded
         val prefix = luckUser.cachedData.metaData.prefix
             ?: luckUser.primaryGroup.replaceFirstChar(Char::uppercaseChar)
-        return sender to prefix.legacyDeserialize()
+        return prefix.legacyDeserialize()
     }
+
+    private fun formatSender(player: Player): Component {
+        val name = database.getNickname(player.uniqueId) ?: NickPreset(player.username)
+        return "<hover:show_text:'${player.username} | <i>Click for more</i>'><click:run_command:'/playerprofile info ${player.username}'><message></click></hover>"
+            .renderSimpleC(name.render(player.username))
+    }
+
+    private fun formatChatMessage(
+        message: String,
+        player: Player,
+        sender: Component = formatSender(player),
+        prefix: Component = formatPrefix(player),
+    ) = formatConfig.chatMessage.render(
+        "message" toC prepareChatMessage(message, player),
+        "sender" toC sender,
+        "prefix" toC prefix,
+    )
 
     val globalChatReceivers = proxy.all { it.uniqueId !in excludedFromGlobalChat }
 
     fun broadcastChatMessage(originServer: String, player: Player, message: String) {
-        val (sender, compoPrefix) = senderAndPrefix(player)
-
-        globalChatReceivers.sendRichMessage(
-            formatConfig.global,
-            "message" toC prepareChatMessage(message, player),
-            "sender" toC sender,
-            "prefix" toC compoPrefix,
-        )
+        val compoPrefix = formatPrefix(player)
+        globalChatReceivers.sendMessage(formatChatMessage(message, player, prefix = compoPrefix))
 
         val plainPrefix = PlainTextComponentSerializer.plainText().serialize(compoPrefix)
         val discordBroadcast = DiscordBroadcastEvent(
@@ -108,16 +116,17 @@ class Messenger(
     }
 
     fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
-        val (sender, compoPrefix) = senderAndPrefix(player)
+        val formattedMessage = formatChatMessage(message, player)
+        val bubbleInfo = Placeholder.styling("bubbleinfo", bubble.formatInfo(proxy))
         bubble.players.forEach { uuid ->
-            proxy.playerOrNull(uuid)?.sendRichMessage(
-                formatConfig.bubbleChat,
-                "message" toC prepareChatMessage(message, player),
-                "sender" toC sender,
-                "prefix" toC compoPrefix,
-                Placeholder.styling("bubbleinfo", bubble.formatInfo(proxy)),
+            proxy.playerOrNull(uuid)?.sendMessage(
+                formatConfig.bubblePrefix.render(bubbleInfo).append(formattedMessage)
             )
         }
+        spies.sendMessage(
+            "<bubbleinfo><gray>[</gray><gold>Spy</gold><gray>]</gray></bubbleinfo> ".render(bubbleInfo)
+                .append(formattedMessage)
+        )
     }
 
     fun prepareChatMessage(
