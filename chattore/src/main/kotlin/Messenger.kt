@@ -16,9 +16,11 @@ import org.openredstone.chattore.feature.Bubble
 import org.openredstone.chattore.feature.DiscordBroadcastEvent
 import org.openredstone.chattore.feature.Emojis
 import org.openredstone.chattore.feature.NickPreset
+import org.slf4j.Logger
 import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.jvm.optionals.getOrNull
 
 fun PluginScope.createMessenger(
     emojis: Emojis,
@@ -30,7 +32,7 @@ fun PluginScope.createMessenger(
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, spies)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, spies, logger)
 }
 
 class Messenger(
@@ -41,6 +43,7 @@ class Messenger(
     private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
     private val spies: Audience,
+    private val logger: Logger,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -101,7 +104,9 @@ class Messenger(
 
     val globalChatReceivers = proxy.all { it.uniqueId !in excludedFromGlobalChat }
 
-    fun broadcastChatMessage(originServer: String, player: Player, message: String) {
+    fun broadcastChatMessage(player: Player, message: String) {
+        logger.info("${player.username} (${player.uniqueId}): $message")
+        val originServer = player.currentServer.getOrNull()?.serverInfo?.name ?: "VOID"
         val compoPrefix = formatPrefix(player)
         globalChatReceivers.sendMessage(formatChatMessage(message, player, prefix = compoPrefix))
 
@@ -116,6 +121,7 @@ class Messenger(
     }
 
     fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
+        logger.info("[Bubble] ${player.username} (${player.uniqueId}): $message")
         val formattedMessage = formatChatMessage(message, player)
         val bubbleInfo = Placeholder.styling("bubbleinfo", bubble.formatInfo(proxy))
         bubble.players.forEach { uuid ->

@@ -24,7 +24,7 @@ fun PluginScope.createChatFeature(
     val confirmations = ChatConfirmations(config, logger)
     val chatListener = ChatListener(confirmations, logger, messenger, bubbleManager)
     registerListeners(chatListener)
-    registerCommands(confirmations.ConfirmMessage(), Shout(chatListener, confirmations))
+    registerCommands(confirmations.ConfirmMessage(), Shout(chatListener))
 }
 
 class ChatConfirmations(
@@ -84,25 +84,21 @@ private class ChatListener(
         val player = event.player
         val message = event.message
         val bubble = bubbleManager.getBubbleByPlayer(player)
+        if (bubble == null) {
+            handleGlobalChat(player, message)
+            return
+        }
         confirmations.submit(player, message) {
             if (bubbleManager.getBubbleByPlayer(player) !== bubble) {
                 player.sendError("You are no longer in the bubble you're trying to send a message to")
                 return@submit
             }
-            handleChat(player, message, bubble)
+            messenger.broadcastBubbleMessage(player, message, bubble)
         }
     }
 
-    fun handleChat(player: Player, message: String, bubble: Bubble?) {
-        player.currentServer.ifPresent { server ->
-            if (bubble != null) {
-                logger.info("[Bubble] ${player.username} (${player.uniqueId}): $message")
-                messenger.broadcastBubbleMessage(player, message, bubble)
-            } else {
-                logger.info("${player.username} (${player.uniqueId}): $message")
-                messenger.broadcastChatMessage(server.serverInfo.name, player, message)
-            }
-        }
+    fun handleGlobalChat(player: Player, message: String) = confirmations.submit(player, message) {
+        messenger.broadcastChatMessage(player, message)
     }
 }
 
@@ -110,12 +106,9 @@ private class ChatListener(
 @CommandPermission("chattore.bubble")
 private class Shout(
     private val chatListener: ChatListener,
-    private val confirmations: ChatConfirmations,
 ) : BaseCommand() {
     @Default
     fun shout(sender: Player, message: String) {
-        confirmations.submit(sender, message) {
-            chatListener.handleChat(sender, message, bubble = null)
-        }
+        chatListener.handleGlobalChat(sender, message)
     }
 }
