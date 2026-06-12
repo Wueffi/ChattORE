@@ -8,25 +8,30 @@ import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.command.CommandExecuteEvent
 import com.velocitypowered.api.proxy.Player
 import net.kyori.adventure.audience.Audience
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.space
 import org.openredstone.chattore.*
 
 private val SpyEnabled = Setting<Boolean>("spy")
 
+typealias Wiretap = (Component) -> Unit
+
 fun PluginScope.createSpyingFeature(
     database: Storage,
-): Audience {
+    formatConfig: FormatConfig,
+): Wiretap {
+    // TODO: this hits the DB way WAY way too often xd
     fun Player.isSpying() = database.getSetting(SpyEnabled, uniqueId) ?: false
     val spies = proxy.all { it.hasChattorePrivilege && it.isSpying() }
     registerCommands(CommandSpy(database))
     registerListeners(CommandListener(spies))
-    return spies
+    val spyPrefix = formatConfig.spyPrefix.render().append(space())
+    return { secrets -> spies.sendMessage(spyPrefix.append(secrets)) }
 }
-
 
 private class CommandListener(
     private val spies: Audience,
 ) {
-
     @Subscribe
     fun onCommandEvent(event: CommandExecuteEvent) {
         spies.sendRichMessage(

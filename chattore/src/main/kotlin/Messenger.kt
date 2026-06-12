@@ -6,16 +6,13 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.space
 import net.kyori.adventure.text.TextReplacementConfig
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
-import org.openredstone.chattore.feature.Bubble
-import org.openredstone.chattore.feature.DiscordBroadcastEvent
-import org.openredstone.chattore.feature.Emojis
-import org.openredstone.chattore.feature.NickPreset
+import org.openredstone.chattore.feature.*
 import org.slf4j.Logger
 import java.net.URI
 import java.util.*
@@ -27,12 +24,12 @@ fun PluginScope.createMessenger(
     database: Storage,
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
-    spies: Audience,
+    wiretap: Wiretap,
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, spies, logger)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, wiretap, logger)
 }
 
 class Messenger(
@@ -42,7 +39,7 @@ class Messenger(
     private val luckPerms: LuckPerms,
     private val formatConfig: FormatConfig,
     private val fileTypeMap: Map<String, List<String>>,
-    private val spies: Audience,
+    private val wiretap: Wiretap,
     private val logger: Logger,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
@@ -123,16 +120,12 @@ class Messenger(
     fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
         logger.info("[Bubble] ${player.username} (${player.uniqueId}): $message")
         val formattedMessage = formatChatMessage(message, player)
-        val bubbleInfo = Placeholder.styling("bubbleinfo", bubble.formatInfo(proxy))
+        val bubbleInfo = Placeholder.styling("bubble_info", bubble.formatInfo(proxy))
+        val renderedMessage = formatConfig.bubblePrefix.render(bubbleInfo).append(space()).append(formattedMessage)
         bubble.players.forEach { uuid ->
-            proxy.playerOrNull(uuid)?.sendMessage(
-                formatConfig.bubblePrefix.render(bubbleInfo).append(formattedMessage)
-            )
+            proxy.playerOrNull(uuid)?.sendMessage(renderedMessage)
         }
-        spies.sendMessage(
-            "<bubbleinfo><gray>[</gray><gold>Spy</gold><gray>]</gray></bubbleinfo> ".render(bubbleInfo)
-                .append(formattedMessage)
-        )
+        wiretap(renderedMessage)
     }
 
     fun prepareChatMessage(

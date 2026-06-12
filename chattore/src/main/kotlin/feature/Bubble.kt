@@ -9,6 +9,7 @@ import com.velocitypowered.api.command.CommandSource
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.space
 import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.event.HoverEvent
 import org.openredstone.chattore.*
@@ -21,6 +22,7 @@ fun PluginScope.createBubbleFeature(
     messenger: Messenger,
     database: Storage,
     chatConfirmations: ChatConfirmations,
+    formatConfig: FormatConfig,
 ): BubbleManager {
     val bubbleManager = BubbleManager()
     commandManager.apply {
@@ -41,7 +43,7 @@ fun PluginScope.createBubbleFeature(
         commandCompletions.setDefaultCompletion("boolean", Boolean::class.java)
         commandCompletions.setDefaultCompletion("players", OnlinePlayer::class.java)
     }
-    registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager, chatConfirmations))
+    registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager, chatConfirmations, formatConfig))
     return bubbleManager
 }
 
@@ -53,6 +55,7 @@ private class BubbleCommand(
     private val database: Storage,
     private val bubbleManager: BubbleManager,
     private val chatConfirmations: ChatConfirmations,
+    private val formatConfig: FormatConfig,
 ) : BaseCommand() {
 
     @CatchUnknown
@@ -224,9 +227,9 @@ private class BubbleCommand(
         chatConfirmations.submit(sender, message) {
             messenger.broadcastChatMessage(sender, message)
             if (sender.uniqueId in messenger.excludedFromGlobalChat) {
-                sender.sendSimpleC(
-                    "<hover:show_text:'You've disabled global chat in bubbles. You won't see if anyone responds.'><gray>[</gray>\uD83D\uDD15<gray>]</gray></hover> <message>",
-                    messenger.formatChatMessage(message, sender),
+                sender.sendMessage(
+                    formatConfig.shoutPrefix.render().append(space())
+                        .append(messenger.formatChatMessage(message, sender))
                 )
             }
         }
