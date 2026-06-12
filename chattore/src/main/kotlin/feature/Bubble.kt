@@ -102,7 +102,7 @@ private class BubbleCommand(
         val bubble = bubbleManager.getBubbleByPlayer(player)
             ?: throw ChattoreException("${player.username} is not in a bubble!")
 
-        if (bubble.isPrivate && sender.uniqueId !in bubble.invitedPlayers)
+        if (bubble.isPrivate && sender.uniqueId !in bubble.invitedPlayers && !sender.hasBubblePrivilege)
             throw ChattoreException("You are not invited to the bubble!")
 
         bubble.invitedPlayers.remove(sender.uniqueId)
@@ -174,20 +174,31 @@ private class BubbleCommand(
         )
     }
 
+    private fun Player.canSee(bubble: Bubble) = hasBubblePrivilege
+        || !bubble.isPrivate || uniqueId in bubble.players || uniqueId in bubble.invitedPlayers
+
+    private val Player.hasBubblePrivilege: Boolean get() = hasPermission("chattore.bubble.manage")
+
     @Subcommand("list")
     @Description("List all bubbles")
     fun list(sender: Player) {
-        if (bubbleManager.bubbles.isEmpty()) {
+        val bubbles = bubbleManager.bubbles.filter { sender.canSee(it) }
+        if (bubbles.isEmpty()) {
             sender.sendInfo("There are currently no bubbles.")
             return
         }
         sender.sendRichMessage("<yellow>Bubbles:</yellow>")
-        for (bubble in bubbleManager.bubbles) {
+        for (bubble in bubbles) {
+            val info = if (sender.uniqueId in bubble.players) {
+                "<gold>Your current bubble".render()
+            } else {
+                bubble.joinButton(proxy)
+            }
             sender.sendMessage(
                 Component.textOfChildren(
                     Component.text(bubble.playersString(proxy)),
                     " <gray>|</gray> ".render(),
-                    bubble.joinButton(proxy),
+                    info,
                 )
             )
         }
