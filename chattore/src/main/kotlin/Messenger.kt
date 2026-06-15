@@ -25,11 +25,12 @@ fun PluginScope.createMessenger(
     luckPerms: LuckPerms,
     formatConfig: FormatConfig,
     wiretap: Wiretap,
+    userCache: UserCache,
 ): Messenger {
     val fileTypeMap = Json.parseToJsonElement(loadResourceAsString("filetypes.json"))
         .jsonObject.mapValues { (_, value) -> value.jsonArray.map { it.jsonPrimitive.content } }
         .onEach { (key, values) -> logger.info("Loaded ${values.size} of type $key") }
-    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, wiretap, logger)
+    return Messenger(emojis, proxy, database, luckPerms, formatConfig, fileTypeMap, wiretap, logger, userCache)
 }
 
 class Messenger(
@@ -41,6 +42,7 @@ class Messenger(
     private val fileTypeMap: Map<String, List<String>>,
     private val wiretap: Wiretap,
     private val logger: Logger,
+    private val userCache: UserCache,
 ) {
     private val urlRegex = """<?((http|https)://([\w_-]+(?:\.[\w_-]+)+)([^\s'<>]+)?)>?""".toRegex()
 
@@ -120,7 +122,7 @@ class Messenger(
     fun broadcastBubbleMessage(player: Player, message: String, bubble: Bubble) {
         logger.info("[Bubble] ${player.username} (${player.uniqueId}): $message")
         val formattedMessage = formatChatMessage(message, player)
-        val bubbleInfo = Placeholder.styling("bubble_info", bubble.formatInfo(proxy))
+        val bubbleInfo = Placeholder.styling("bubble_info", bubble.formatInfo(userCache))
         val renderedMessage = formatConfig.bubblePrefix.render(bubbleInfo).append(space()).append(formattedMessage)
         bubble.players.forEach { uuid ->
             proxy.playerOrNull(uuid)?.sendMessage(renderedMessage)

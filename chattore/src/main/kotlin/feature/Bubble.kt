@@ -23,6 +23,7 @@ fun PluginScope.createBubbleFeature(
     database: Storage,
     chatConfirmations: ChatConfirmations,
     formatConfig: FormatConfig,
+    userCache: UserCache,
 ): BubbleManager {
     val bubbleManager = BubbleManager()
     commandManager.apply {
@@ -43,7 +44,17 @@ fun PluginScope.createBubbleFeature(
         commandCompletions.setDefaultCompletion("boolean", Boolean::class.java)
         commandCompletions.setDefaultCompletion("players", OnlinePlayer::class.java)
     }
-    registerCommands(BubbleCommand(messenger, proxy, database, bubbleManager, chatConfirmations, formatConfig))
+    registerCommands(
+        BubbleCommand(
+            messenger,
+            proxy,
+            database,
+            bubbleManager,
+            chatConfirmations,
+            formatConfig,
+            userCache,
+        )
+    )
     return bubbleManager
 }
 
@@ -56,6 +67,7 @@ private class BubbleCommand(
     private val bubbleManager: BubbleManager,
     private val chatConfirmations: ChatConfirmations,
     private val formatConfig: FormatConfig,
+    private val userCache: UserCache,
 ) : BaseCommand() {
 
     @CatchUnknown
@@ -196,7 +208,7 @@ private class BubbleCommand(
             }
             sender.sendMessage(
                 Component.textOfChildren(
-                    Component.text(bubble.playersString(proxy)),
+                    Component.text(bubble.playersString(userCache)),
                     " <gray>|</gray> ".render(),
                     info,
                 )
@@ -272,12 +284,11 @@ class Bubble(
     val invitedPlayers: MutableSet<UUID>,
     var isPrivate: Boolean,
 ) {
-    fun playersString(proxy: ProxyServer) = players
-        .mapNotNull { uuid -> proxy.playerOrNull(uuid)?.username }
-        .joinToString(", ")
+    fun playersString(userCache: UserCache) =
+        players.joinToString(", ", transform = userCache::usernameOrUuid)
 
-    fun formatInfo(proxy: ProxyServer) =
-        HoverEvent.showText(Component.text("Bubble: ${playersString(proxy)}"))
+    fun formatInfo(userCache: UserCache) =
+        HoverEvent.showText(Component.text("Bubble: ${playersString(userCache)}"))
 
     fun joinButton(proxy: ProxyServer): Component {
         val ownerName = proxy.playerOrNull(owner)?.username ?: owner.toString()
