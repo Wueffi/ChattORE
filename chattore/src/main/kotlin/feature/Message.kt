@@ -7,6 +7,7 @@ import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Syntax
 import co.aikar.commands.velocity.contexts.OnlinePlayer
 import com.velocitypowered.api.proxy.Player
+import net.kyori.adventure.text.Component
 import org.openredstone.chattore.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap

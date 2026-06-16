@@ -123,7 +123,8 @@ class Messenger(
         logger.info("[Bubble] ${player.username} (${player.uniqueId}): $message")
         val formattedMessage = formatChatMessage(message, player)
         val bubbleInfo = Placeholder.styling("bubble_info", bubble.formatInfo(userCache))
-        val renderedMessage = formatConfig.bubblePrefix.render(bubbleInfo).append(space()).append(formattedMessage)
+        val renderedMessage =
+            Component.textOfChildren(formatConfig.bubblePrefix.render(bubbleInfo), space(), formattedMessage)
         bubble.players.forEach { uuid ->
             proxy.playerOrNull(uuid)?.sendMessage(renderedMessage)
         }

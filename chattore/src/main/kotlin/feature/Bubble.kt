@@ -255,8 +255,11 @@ private class BubbleCommand(
             messenger.broadcastChatMessage(sender, message)
             if (sender.uniqueId in messenger.excludedFromGlobalChat) {
                 sender.sendMessage(
-                    formatConfig.shoutPrefix.render().append(space())
-                        .append(messenger.formatChatMessage(message, sender))
+                    textOfChildren(
+                        formatConfig.shoutPrefix.render(),
+                        space(),
+                        messenger.formatChatMessage(message, sender),
+                    )
                 )
             }
         }

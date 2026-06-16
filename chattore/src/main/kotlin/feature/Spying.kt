@@ -9,6 +9,7 @@ import com.velocitypowered.api.proxy.Player
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.Component.space
+import net.kyori.adventure.text.Component.textOfChildren
 import org.openredstone.chattore.*
 
 // TODO: rename the key, requires a DB migration
@@ -26,13 +27,11 @@ fun PluginScope.createSpyingFeature(database: Storage, formatConfig: FormatConfi
     registerCommands(SpyCommands(database))
     registerListeners(CommandListener(commandSpies))
 
-    val spyPrefix = formatConfig.spyPrefix.render().append(space())
-    return { secrets -> socialSpies.sendMessage(spyPrefix.append(secrets)) }
+    val spyPrefix = formatConfig.spyPrefix.render()
+    return { secrets -> socialSpies.sendMessage(textOfChildren(spyPrefix, space(), secrets)) }
 }
 
-private class CommandListener(
-    private val spies: Audience,
-) {
+private class CommandListener(private val spies: Audience) {
     @Subscribe
     fun onCommandEvent(event: CommandExecuteEvent) {
         spies.sendRichMessage(
@@ -43,19 +42,17 @@ private class CommandListener(
     }
 }
 
-private class SpyCommands(
-    private val database: Storage,
-) : BaseCommand() {
+private class SpyCommands(private val database: Storage) : BaseCommand() {
     @CommandAlias("commandspy")
     @CommandPermission("chattore.commandspy")
     fun commandSpy(player: Player) {
-        toggleSpy(player, CommandSpyEnabled, "Command spy")
+        toggleSpy(player, CommandSpyEnabled, "Command")
     }
 
     @CommandAlias("socialspy")
     @CommandPermission("chattore.socialspy")
     fun socialSpy(player: Player) {
-        toggleSpy(player, SocialSpyEnabled, "Social spy")
+        toggleSpy(player, SocialSpyEnabled, "Social")
     }
 
     private fun toggleSpy(player: Player, spySetting: Setting<Boolean>, kind: String) {
@@ -63,9 +60,9 @@ private class SpyCommands(
         database.setSetting(spySetting, player.uniqueId, newSetting)
         player.sendInfo(
             if (newSetting) {
-                "$kind enabled."
+                "$kind spy enabled."
             } else {
-                "$kind disabled."
+                "$kind spy disabled."
             },
         )
     }
