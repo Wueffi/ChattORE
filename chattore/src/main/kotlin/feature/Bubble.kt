@@ -41,9 +41,6 @@ fun PluginScope.createBubbleFeature(
             }
             bubble
         }
-        commandCompletions.registerStaticCompletion("boolean", arrayOf("true", "false"))
-        commandCompletions.setDefaultCompletion("boolean", Boolean::class.java)
-        commandCompletions.setDefaultCompletion("players", OnlinePlayer::class.java)
     }
     registerCommands(
         BubbleCommand(

@@ -1,7 +1,10 @@
 package org.openredstone.chattore.feature
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Syntax
 import co.aikar.commands.velocity.contexts.OnlinePlayer
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
@@ -29,8 +32,6 @@ private class Message(
 ) : BaseCommand() {
     @Default
     @Syntax("[target] <message>")
-    // unsure if this is needed
-    @CommandCompletion("@players")
     fun default(sender: Player, recipient: OnlinePlayer, message: String) {
         sendMessage(logger, messenger, replyMap, sender, recipient.player, message)
     }

@@ -1,6 +1,7 @@
 package org.openredstone.chattore
 
 import co.aikar.commands.*
+import co.aikar.commands.velocity.contexts.OnlinePlayer
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
@@ -38,7 +39,9 @@ class ChattORE @Inject constructor(
         val pluginScope = PluginScope(this, ChattORE::class.java, proxy, dataFolder, logger, commandManager)
         commandManager.apply {
             setDefaultExceptionHandler(::handleCommandException, false)
-            commandCompletions.registerCompletion("username") { listOf(it.player.username) }
+            commandCompletions.registerStaticCompletion("boolean", arrayOf("true", "false"))
+            commandCompletions.setDefaultCompletion("boolean", Boolean::class.java)
+            commandCompletions.setDefaultCompletion("players", OnlinePlayer::class.java)
             @Suppress("DEPRECATION")
             enableUnstableAPI("help")
         }
