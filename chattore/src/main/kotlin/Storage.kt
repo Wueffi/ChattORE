@@ -1,6 +1,9 @@
 package org.openredstone.chattore
 
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -45,7 +48,7 @@ object JsonSetting : Table("setting") {
     val uuidKeyIndex = index("setting_uuid_key_index", true, uuid, key)
 }
 
-class Setting<T>(val key: String)
+class Setting<T : Any>(val key: String)
 
 class Storage(
     dbFile: Path,
@@ -138,19 +141,38 @@ class Storage(
         }
     }
 
-    inline fun <reified T> setSetting(setting: Setting<T>, uuid: UUID, value: T) = transaction(database) {
-        JsonSetting.upsert {
-            it[JsonSetting.uuid] = uuid.toString()
-            it[key] = setting.key
-            it[JsonSetting.value] = Json.encodeToString(value)
+    private val settingCache = ConcurrentHashMap<Pair<Setting<*>, UUID>, Any>()
+
+    // these ugly wrappers are needed due to reified generics and to keep settingCache private
+    inline fun <reified T : Any> setSetting(setting: Setting<T>, uuid: UUID, value: T) =
+        unsafeSetSetting(setting, uuid, value, Json.serializersModule.serializer())
+
+    fun <T : Any> unsafeSetSetting(setting: Setting<T>, uuid: UUID, value: T, serializer: SerializationStrategy<T>) {
+        transaction(database) {
+            JsonSetting.upsert {
+                it[JsonSetting.uuid] = uuid.toString()
+                it[key] = setting.key
+                it[JsonSetting.value] = Json.encodeToString(serializer, value)
+            }
         }
+        settingCache[setting to uuid] = value
     }
 
-    inline fun <reified T> getSetting(setting: Setting<T>, uuid: UUID): T? = transaction {
-        val result = JsonSetting.selectAll().where {
-            (JsonSetting.uuid eq uuid.toString()) and (JsonSetting.key eq setting.key)
-        }.singleOrNull() ?: return@transaction null
-        val jsonString = result[JsonSetting.value]
-        Json.decodeFromString<T>(jsonString)
+    inline fun <reified T : Any> getSetting(setting: Setting<T>, uuid: UUID): T? =
+        unsafeGetSetting(setting, uuid, Json.serializersModule.serializer())
+
+    fun <T : Any> unsafeGetSetting(setting: Setting<T>, uuid: UUID, deserializer: DeserializationStrategy<T>): T? {
+        val cached = settingCache[setting to uuid]
+        @Suppress("UNCHECKED_CAST")
+        if (cached != null) return cached as T
+        val value = transaction {
+            val result = JsonSetting.selectAll().where {
+                (JsonSetting.uuid eq uuid.toString()) and (JsonSetting.key eq setting.key)
+            }.singleOrNull() ?: return@transaction null
+            val jsonString = result[JsonSetting.value]
+            Json.decodeFromString(deserializer, jsonString)
+        } ?: return null
+        settingCache[setting to uuid] = value
+        return value
     }
 }
