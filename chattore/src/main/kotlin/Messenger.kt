@@ -101,13 +101,13 @@ class Messenger(
         "prefix" toC prefix,
     )
 
-    val globalChatReceivers = proxy.all { it.uniqueId !in excludedFromGlobalChat }
+    val globalChat = proxy.all { it.uniqueId !in excludedFromGlobalChat }
 
     fun broadcastChatMessage(player: Player, message: String) {
         logger.info("${player.username} (${player.uniqueId}): $message")
         val originServer = player.currentServer.getOrNull()?.serverInfo?.name ?: "VOID"
         val compoPrefix = formatPrefix(player)
-        globalChatReceivers.sendMessage(formatChatMessage(message, player, prefix = compoPrefix))
+        globalChat.sendMessage(formatChatMessage(message, player, prefix = compoPrefix))
 
         val plainPrefix = PlainTextComponentSerializer.plainText().serialize(compoPrefix)
         val discordBroadcast = DiscordBroadcastEvent(

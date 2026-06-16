@@ -150,7 +150,7 @@ private class DiscordListener(
             val url = matchResult.groupValues[2].trim()
             "$text: $url"
         }.replace("""\s+""".toRegex(), " ")
-        messenger.globalChatReceivers.sendRichMessage(
+        messenger.globalChat.sendRichMessage(
             config.ingameFormat,
             "sender" toS displayName,
             "message" toC messenger.prepareChatMessage(transformedMessage, null),

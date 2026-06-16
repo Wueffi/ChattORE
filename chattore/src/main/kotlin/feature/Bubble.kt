@@ -9,9 +9,10 @@ import com.velocitypowered.api.command.CommandSource
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.Component.space
-import net.kyori.adventure.text.event.ClickEvent
+import net.kyori.adventure.text.Component.*
+import net.kyori.adventure.text.event.ClickEvent.runCommand
 import net.kyori.adventure.text.event.HoverEvent
+import net.kyori.adventure.text.event.HoverEvent.showText
 import org.openredstone.chattore.*
 import java.util.*
 
@@ -100,7 +101,12 @@ private class BubbleCommand(
         bubble.invitedPlayers.add(player.uniqueId)
         sender.sendInfo("Invited ${player.username}.")
         player.sendInfoC(
-            "${sender.username} invited you to their bubble. ".toComponent().append(bubble.joinButton(proxy)),
+            textOfChildren(
+                text("${sender.username} invited you to their bubble. "),
+                bubble.joinButton(userCache),
+                newline(),
+                text("Currently in the bubble: ${bubble.playersString(userCache)}"),
+            ),
         )
     }
 
@@ -204,11 +210,11 @@ private class BubbleCommand(
             val info = if (sender.uniqueId in bubble.players) {
                 "<gold>Your current bubble".render()
             } else {
-                bubble.joinButton(proxy)
+                bubble.joinButton(userCache)
             }
             sender.sendMessage(
-                Component.textOfChildren(
-                    Component.text(bubble.playersString(userCache)),
+                textOfChildren(
+                    text(bubble.playersString(userCache)),
                     " <gray>|</gray> ".render(),
                     info,
                 )
@@ -287,14 +293,14 @@ class Bubble(
     fun playersString(userCache: UserCache) =
         players.joinToString(", ", transform = userCache::usernameOrUuid)
 
-    fun formatInfo(userCache: UserCache) =
-        HoverEvent.showText(Component.text("Bubble: ${playersString(userCache)}"))
+    fun formatInfo(userCache: UserCache): HoverEvent<Component> =
+        showText(text("Bubble: ${playersString(userCache)}"))
 
-    fun joinButton(proxy: ProxyServer): Component {
-        val ownerName = proxy.playerOrNull(owner)?.username ?: owner.toString()
+    fun joinButton(userCache: UserCache): Component {
+        val ownerName = userCache.usernameOrUuid(owner)
         return "<gray>[</gray><green>Join</green><gray>]</gray>".render()
-            .clickEvent(ClickEvent.runCommand("/bubble join $ownerName"))
-            .hoverEvent(HoverEvent.showText(Component.text("Click to join bubble")))
+            .clickEvent(runCommand("/bubble join $ownerName"))
+            .hoverEvent(showText(text("Click to join bubble")))
     }
 }
 
