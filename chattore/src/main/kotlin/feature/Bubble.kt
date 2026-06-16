@@ -15,6 +15,7 @@ import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.event.HoverEvent.showText
 import org.openredstone.chattore.*
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 private val ShowGlobalChatInBubble = Setting<Boolean>("showGlobalChatInBubble")
 private const val BUBBLE_OWNED = "bubbleOwned"
@@ -42,6 +43,19 @@ fun PluginScope.createBubbleFeature(
             }
             bubble
         }
+        commandContexts.registerContext(Array<Player>::class.java) { ctx ->
+            // distinct() is called here already so that sendError is not called more than once per string.
+            // If this is upgraded to do fuzzy matching, then something different is needed.
+            ctx.args.map(String::lowercase).distinct()
+                .mapNotNull { arg ->
+                    proxy.getPlayer(arg).getOrNull() ?: run {
+                        ctx.sender.sendError("Player $arg is not online!")
+                        null
+                    }
+                }
+                .toTypedArray()
+        }
+        commandCompletions.setDefaultCompletion("players", Array<Player>::class.java)
     }
     registerCommands(
         BubbleCommand(
@@ -77,20 +91,41 @@ private class BubbleCommand(
         help.showHelp()
     }
 
+    // NOTE: for some reason Array<Player> still requires the explicit CommandCompletion annotation
     @Subcommand("create|blow")
     @Description("Create (\"blow\") a bubble")
-    fun create(sender: Player) {
+    @CommandCompletion("@players")
+    fun create(sender: Player, @ConsumesRest players: Array<Player>) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
             throw ChattoreException("You are already in a bubble!")
-        bubbleManager.createBubble(sender.uniqueId)
+        val bubble = bubbleManager.createBubble(sender.uniqueId)
         addExcluded(sender.uniqueId)
         sender.sendInfo("Bubble created.")
+        sendInvites(sender, bubble, players)
     }
 
     @Subcommand("invite")
-    @Description("Invite a player to your bubble (if it is private)")
-    fun invite(sender: Player, bubble: Bubble, target: OnlinePlayer) {
-        val player = target.player
+    @Description("Invite players to your bubble (if it is private)")
+    @CommandCompletion("@players")
+    fun invite(sender: Player, bubble: Bubble, @ConsumesRest targets: Array<Player>) {
+        if (targets.isEmpty())
+            throw ChattoreException("Please specify one or more players to invite.")
+        sendInvites(sender, bubble, targets)
+    }
+
+    private fun sendInvites(sender: Player, bubble: Bubble, targets: Array<Player>) {
+        for (player in targets) {
+            try {
+                doInvite(sender, bubble, player)
+            } catch (e: ChattoreException) {
+                sender.sendError(e.message ?: throw e)
+            }
+        }
+    }
+
+    private fun doInvite(sender: Player, bubble: Bubble, player: Player) {
+        if (sender == player)
+            throw ChattoreException("You cannot invite yourself!")
         if (player.uniqueId in bubble.invitedPlayers)
             throw ChattoreException("${player.username} is already invited!")
         if (player.uniqueId in bubble.players)
@@ -309,8 +344,10 @@ class BubbleManager {
     private val _bubbles: MutableList<Bubble> = mutableListOf()
     val bubbles: List<Bubble> get() = _bubbles
 
-    fun createBubble(player: UUID) {
-        _bubbles.add(Bubble(player, mutableSetOf(player), mutableSetOf(), false))
+    fun createBubble(player: UUID): Bubble {
+        val bubble = Bubble(player, mutableSetOf(player), mutableSetOf(), false)
+        _bubbles.add(bubble)
+        return bubble
     }
 
     fun removeBubble(bubble: Bubble) {
