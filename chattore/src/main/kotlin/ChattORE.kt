@@ -60,7 +60,7 @@ class ChattORE @Inject constructor(
             createHelpOpFeature()
             createJoinLeaveFeature(config.format)
             createMailFeature(database, userCache)
-            createMessageFeature(messenger)
+            createMessageFeature(messenger, chatConfirmations)
             createNicknameFeature(
                 database, userCache, NicknameConfig(
                     config.clearNicknameOnChange,

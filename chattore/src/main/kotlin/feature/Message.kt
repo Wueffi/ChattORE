@@ -15,25 +15,33 @@ import java.util.concurrent.ConcurrentHashMap
 
 fun PluginScope.createMessageFeature(
     messenger: Messenger,
+    chatConfirmations: ChatConfirmations,
 ) {
     val replyMap = ConcurrentHashMap<UUID, UUID>()
     registerCommands(
-        Message(logger, messenger, replyMap),
-        Reply(proxy, logger, messenger, replyMap),
+        Message(proxy, logger, messenger, replyMap, chatConfirmations),
+        Reply(proxy, logger, messenger, replyMap, chatConfirmations),
     )
 }
 
 @CommandAlias("m|pm|msg|message|vmsg|vmessage|whisper|tell")
 @CommandPermission("chattore.message")
 private class Message(
+    private val proxy: ProxyServer,
     private val logger: Logger,
     private val messenger: Messenger,
     private val replyMap: ConcurrentHashMap<UUID, UUID>,
+    private val chatConfirmations: ChatConfirmations,
 ) : BaseCommand() {
     @Default
     @Syntax("[target] <message>")
     fun default(sender: Player, recipient: OnlinePlayer, message: String) {
-        sendMessage(logger, messenger, replyMap, sender, recipient.player, message)
+        val recipientUuid = recipient.player.uniqueId
+        chatConfirmations.submit(sender, message) {
+            val recipientPlayer = proxy.playerOrNull(recipientUuid)
+                ?: throw ChattoreException("The person you're trying to message is no longer online!")
+            sendMessage(logger, messenger, replyMap, sender, recipientPlayer, message)
+        }
     }
 }
 
@@ -44,13 +52,16 @@ private class Reply(
     private val logger: Logger,
     private val messenger: Messenger,
     private val replyMap: ConcurrentHashMap<UUID, UUID>,
+    private val chatConfirmations: ChatConfirmations,
 ) : BaseCommand() {
     @Default
     fun default(sender: Player, message: String) {
         val recipientUuid = replyMap[sender.uniqueId] ?: throw ChattoreException("You have no one to reply to!")
-        val recipient = proxy.playerOrNull(recipientUuid)
-            ?: throw ChattoreException("The person you are trying to reply to is no longer online!")
-        sendMessage(logger, messenger, replyMap, sender, recipient, message)
+        chatConfirmations.submit(sender, message) {
+            val recipient = proxy.playerOrNull(recipientUuid)
+                ?: throw ChattoreException("The person you are trying to reply to is no longer online!")
+            sendMessage(logger, messenger, replyMap, sender, recipient, message)
+        }
     }
 }
 
