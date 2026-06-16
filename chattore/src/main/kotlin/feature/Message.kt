@@ -16,11 +16,12 @@ import java.util.concurrent.ConcurrentHashMap
 fun PluginScope.createMessageFeature(
     messenger: Messenger,
     chatConfirmations: ChatConfirmations,
+    wiretap: Wiretap,
 ) {
     val replyMap = ConcurrentHashMap<UUID, UUID>()
     registerCommands(
-        Message(proxy, logger, messenger, replyMap, chatConfirmations),
-        Reply(proxy, logger, messenger, replyMap, chatConfirmations),
+        Message(proxy, logger, messenger, replyMap, chatConfirmations, wiretap),
+        Reply(proxy, logger, messenger, replyMap, chatConfirmations, wiretap),
     )
 }
 
@@ -32,6 +33,7 @@ private class Message(
     private val messenger: Messenger,
     private val replyMap: ConcurrentHashMap<UUID, UUID>,
     private val chatConfirmations: ChatConfirmations,
+    private val wiretap: Wiretap,
 ) : BaseCommand() {
     @Default
     @Syntax("[target] <message>")
@@ -40,7 +42,7 @@ private class Message(
         chatConfirmations.submit(sender, message) {
             val recipientPlayer = proxy.playerOrNull(recipientUuid)
                 ?: throw ChattoreException("The person you're trying to message is no longer online!")
-            sendMessage(logger, messenger, replyMap, sender, recipientPlayer, message)
+            sendMessage(logger, wiretap, messenger, replyMap, sender, recipientPlayer, message)
         }
     }
 }
@@ -53,6 +55,7 @@ private class Reply(
     private val messenger: Messenger,
     private val replyMap: ConcurrentHashMap<UUID, UUID>,
     private val chatConfirmations: ChatConfirmations,
+    private val wiretap: Wiretap,
 ) : BaseCommand() {
     @Default
     fun default(sender: Player, message: String) {
@@ -60,13 +63,14 @@ private class Reply(
         chatConfirmations.submit(sender, message) {
             val recipient = proxy.playerOrNull(recipientUuid)
                 ?: throw ChattoreException("The person you are trying to reply to is no longer online!")
-            sendMessage(logger, messenger, replyMap, sender, recipient, message)
+            sendMessage(logger, wiretap, messenger, replyMap, sender, recipient, message)
         }
     }
 }
 
 private fun sendMessage(
     logger: Logger,
+    wiretap: Wiretap,
     messenger: Messenger,
     replyMap: MutableMap<UUID, UUID>,
     sender: Player,
@@ -77,16 +81,17 @@ private fun sendMessage(
         "${sender.username} (${sender.uniqueId}) -> " +
             "${recipient.username} (${recipient.uniqueId}): $message"
     )
-    sender.sendRichMessage(
-        "<gold>[</gold><red>me</red> <gold>-></gold> <red><recipient></red><gold>]</gold> <message>",
-        "message" toC messenger.prepareChatMessage(message, sender),
-        "recipient" toS recipient.username,
-    )
-    recipient.sendRichMessage(
-        "<gold>[</gold><red><sender></red> <gold>-></gold> <red>me</red><gold>]</gold> <message>",
-        "message" toC messenger.prepareChatMessage(message, sender),
-        "sender" toS sender.username,
-    )
+
+    val preparedMessage = messenger.prepareChatMessage(message, sender)
+    fun renderDM(senderName: String, recipientName: String) =
+        "<gold>[</gold><red><sender></red> <gold>-></gold> <red><recipient></red><gold>]</gold> <message>".render(
+            "sender" toS senderName, "recipient" toS recipientName, "message" toC preparedMessage,
+        )
+
+    sender.sendMessage(renderDM("me", recipient.username))
+    recipient.sendMessage(renderDM(sender.username, "me"))
+    wiretap(renderDM(sender.username, recipient.username))
+
     replyMap[recipient.uniqueId] = sender.uniqueId
     replyMap[sender.uniqueId] = recipient.uniqueId
 }
