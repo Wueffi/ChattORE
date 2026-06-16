@@ -30,13 +30,14 @@ fun PluginScope.createBubbleFeature(
     commandManager.apply {
         commandContexts.registerIssuerOnlyContext(Bubble::class.java) { ctx ->
             val sender = ctx.sender as? Player
-                ?: throw InvalidCommandArgument("This command can only be used by players!")
+                ?: throw InvalidCommandArgument("This command can only be used by players!", false)
             val bubble = bubbleManager.getBubbleByPlayer(sender)
-                ?: throw InvalidCommandArgument("You are not in a bubble!")
+                ?: throw InvalidCommandArgument("You are not in a bubble!", false)
             if (ctx.hasFlag(BUBBLE_OWNED) && bubble.owner != sender.uniqueId) {
                 val ownerName = proxy.playerOrNull(bubble.owner)?.username ?: bubble.owner.toString()
                 throw InvalidCommandArgument(
                     "You must be the owner of the bubble to use this command. (Current owner: $ownerName)",
+                    false,
                 )
             }
             bubble
