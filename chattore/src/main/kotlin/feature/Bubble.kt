@@ -17,7 +17,7 @@ import org.openredstone.chattore.*
 import java.util.*
 
 private val ShowGlobalChatInBubble = Setting<Boolean>("showGlobalChatInBubble")
-private const val BUBBLE_OWNED = "bubble-owned"
+private const val BUBBLE_OWNED = "bubbleOwned"
 
 fun PluginScope.createBubbleFeature(
     messenger: Messenger,
