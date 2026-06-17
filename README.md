@@ -43,19 +43,19 @@ Because we want to have a chat system that actually wOREks for us.
 
 ## Bubble Commands
 
-| Command                            | Permission               | Description                                               | Aliases                |
-|------------------------------------|--------------------------|-----------------------------------------------------------|------------------------|
-| `/bubble create`                   | `chattore.bubble`        | Create ("blow") a bubble                                  | `/bb create\|/bb blow` |
-| `/bubble invite <player>`          | `chattore.bubble`        | Invite a player to your bubble (if it is private)         | `/bb invite`           |
-| `/bubble join <player>`            | `chattore.bubble`        | Join a player's bubble                                    | `/bb join`             |
-| `/bubble leave`                    | `chattore.bubble`        | Leave your current bubble                                 | `/bb leave`            |
-| `/bubble delete`                   | `chattore.bubble`        | Delete ("pop") your own bubble                            | `/bb delete\|/bb pop`  |
-| `/bubble kick <player>`            | `chattore.bubble`        | Kick a player from your own bubble                        | `/bb kick`             |
-| `/bubble setprivate <boolean>`     | `chattore.bubble`        | Set the visibility of your own bubble                     | `/bb setprivate`       |
-| `/bubble list`                     | `chattore.bubble`        | List all bubbles                                          | `/bb list`             |
-| `/shout <message>`                 | `chattore.bubble`        | Send a message to global chat when inside a bubble        | No aliases             |
-| `/bubble burst <player>`           | `chattore.bubble.manage` | Burst (delete) someone's bubble                           | `/bb burst`            |
-| `/bubble showglobalchat <boolean>` | `chattore.bubble`        | Toggle the visibility of global chat when inside a bubble | `/bb sgc`              |
+| Command                            | Permission               | Description                                            | Aliases                |
+|------------------------------------|--------------------------|--------------------------------------------------------|------------------------|
+| `/bubble create [players]`         | `chattore.bubble`        | Create ("blow") a bubble and invite players            | `/bb create\|/bb blow` |
+| `/bubble invite <players>`         | `chattore.bubble`        | Invite players to your bubble (if it is private)       | `/bb invite`           |
+| `/bubble join <player>`            | `chattore.bubble`        | Join a player's bubble                                 | `/bb join`             |
+| `/bubble leave`                    | `chattore.bubble`        | Leave your current bubble                              | `/bb leave`            |
+| `/bubble delete`                   | `chattore.bubble`        | Delete ("pop") your own bubble                         | `/bb delete\|/bb pop`  |
+| `/bubble kick <player>`            | `chattore.bubble`        | Kick a player from your own bubble                     | `/bb kick`             |
+| `/bubble setprivate <boolean>`     | `chattore.bubble`        | Set the visibility of your own bubble                  | `/bb setprivate`       |
+| `/bubble list`                     | `chattore.bubble`        | List all bubbles                                       | `/bb list`             |
+| `/shout <message>`                 | `chattore.bubble`        | Send a message to global chat when in a bubble         | No aliases             |
+| `/bubble burst <player>`           | `chattore.bubble.manage` | Burst (delete) someone's bubble                        | `/bb burst`            |
+| `/bubble showglobalchat <boolean>` | `chattore.bubble`        | Control the visibility of global chat when in a bubble | `/bb sgc`              |
 
 ## Other Commands
 

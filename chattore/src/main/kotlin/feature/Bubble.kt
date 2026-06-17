@@ -93,7 +93,7 @@ private class BubbleCommand(
 
     // NOTE: for some reason Array<Player> still requires the explicit CommandCompletion annotation
     @Subcommand("create|blow")
-    @Description("Create (\"blow\") a bubble")
+    @Description("Create (\"blow\") a bubble and invite players")
     @CommandCompletion("@players")
     fun create(sender: Player, @ConsumesRest players: Array<Player>) {
         if (bubbleManager.getBubbleByPlayer(sender) != null)
