@@ -114,7 +114,7 @@ class Messenger(
             plainPrefix,
             player.username,
             originServer,
-            message
+            message,
         )
         proxy.eventManager.fireAndForget(discordBroadcast)
     }

@@ -23,7 +23,7 @@ import kotlin.io.path.exists
     url = "https://openredstone.org",
     description = "Because we want to have a chat system that actually wOREks for us.",
     authors = ["Nickster258", "PaukkuPalikka", "StackDoubleFlow", "sodiboo", "Waffle [Wueffi]"],
-    dependencies = [Dependency(id = "luckperms")]
+    dependencies = [Dependency(id = "luckperms")],
 )
 class ChattORE @Inject constructor(
     private val proxy: ProxyServer,
@@ -62,11 +62,12 @@ class ChattORE @Inject constructor(
             createMailFeature(database, userCache)
             createMessageFeature(messenger, chatConfirmations, wiretap)
             createNicknameFeature(
-                database, userCache, NicknameConfig(
+                database, userCache,
+                NicknameConfig(
                     config.clearNicknameOnChange,
                     // IDK, this when config
                     config.nicknamePresets.mapValues { (_, v) -> NickPreset(v) }.toSortedMap(),
-                )
+                ),
             )
             createProfileFeature(database, luckPerms, userCache)
         }

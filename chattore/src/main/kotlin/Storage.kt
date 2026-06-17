@@ -64,7 +64,7 @@ class Storage(
 
     private fun initTables() = transaction(database) {
         SchemaUtils.create(
-            About, Mail, Nick, UsernameCache, JsonSetting
+            About, Mail, Nick, UsernameCache, JsonSetting,
         )
     }
 
@@ -130,7 +130,7 @@ class Storage(
                     it[Mail.id],
                     it[Mail.timestamp],
                     UUID.fromString(it[Mail.sender]),
-                    it[Mail.read]
+                    it[Mail.read],
                 )
             }
     }

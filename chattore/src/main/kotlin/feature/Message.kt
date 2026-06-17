@@ -21,7 +21,7 @@ fun PluginScope.createMessageFeature(
     fun sendMessage(sender: Player, recipient: Player, message: String) {
         logger.info(
             "${sender.username} (${sender.uniqueId}) -> " +
-                "${recipient.username} (${recipient.uniqueId}): $message"
+                "${recipient.username} (${recipient.uniqueId}): $message",
         )
 
         val preparedMessage = messenger.prepareChatMessage(message, sender)

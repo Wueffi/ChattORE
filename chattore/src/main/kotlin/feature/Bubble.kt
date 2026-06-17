@@ -66,7 +66,7 @@ fun PluginScope.createBubbleFeature(
             chatConfirmations,
             formatConfig,
             userCache,
-        )
+        ),
     )
     return bubbleManager
 }
@@ -252,7 +252,7 @@ private class BubbleCommand(
                     text(bubble.playersString(userCache)),
                     " <gray>|</gray> ".render(),
                     info,
-                )
+                ),
             )
         }
     }
@@ -281,7 +281,7 @@ private class BubbleCommand(
         }
         sender.sendInfo(
             if (showGlobalChat) "You will now see global chat in bubbles."
-            else "You will no longer see global chat in bubbles."
+            else "You will no longer see global chat in bubbles.",
         )
     }
 
@@ -296,7 +296,7 @@ private class BubbleCommand(
                         formatConfig.shoutPrefix.render(),
                         space(),
                         messenger.formatChatMessage(message, sender),
-                    )
+                    ),
                 )
             }
         }
