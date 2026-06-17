@@ -108,6 +108,8 @@ private class BubbleCommand(
     @Description("Invite players to your bubble (if it is private)")
     @CommandCompletion("@players")
     fun invite(sender: Player, bubble: Bubble, @ConsumesRest targets: Array<Player>) {
+        if (!bubble.isPrivate)
+            throw ChattoreException("Your bubble is public, anyone can join without invitation.")
         if (targets.isEmpty())
             throw ChattoreException("Please specify one or more players to invite.")
         sendInvites(sender, bubble, targets)
