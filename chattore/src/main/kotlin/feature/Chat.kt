@@ -2,8 +2,9 @@ package org.openredstone.chattore.feature
 
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.player.PlayerChatEvent
-import org.openredstone.chattore.*
-import java.util.*
+import org.openredstone.chattore.Messenger
+import org.openredstone.chattore.PluginScope
+import org.openredstone.chattore.sendError
 
 fun PluginScope.createChatFeature(
     messenger: Messenger,
