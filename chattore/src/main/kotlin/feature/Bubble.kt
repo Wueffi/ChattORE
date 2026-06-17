@@ -346,11 +346,8 @@ class BubbleManager {
     private val _bubbles: MutableList<Bubble> = mutableListOf()
     val bubbles: List<Bubble> get() = _bubbles
 
-    fun createBubble(player: UUID): Bubble {
-        val bubble = Bubble(player, mutableSetOf(player), mutableSetOf(), false)
-        _bubbles.add(bubble)
-        return bubble
-    }
+    fun createBubble(player: UUID): Bubble =
+        Bubble(player, mutableSetOf(player), mutableSetOf(), isPrivate = true).also(_bubbles::add)
 
     fun removeBubble(bubble: Bubble) {
         _bubbles.remove(bubble)
