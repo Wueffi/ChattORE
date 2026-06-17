@@ -17,7 +17,7 @@ import org.openredstone.chattore.*
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
-private val ShowGlobalChatInBubble = Setting<Boolean>("showGlobalChatInBubble")
+private val ShowGlobalChatInBubble = Setting("showGlobalChatInBubble", default = false)
 private const val BUBBLE_OWNED = "bubbleOwned"
 
 fun PluginScope.createBubbleFeature(
@@ -316,7 +316,7 @@ private class BubbleCommand(
     }
 
     private fun addExcluded(uuid: UUID) {
-        if (database.getSetting(ShowGlobalChatInBubble, uuid) != true) {
+        if (!database.getSetting(ShowGlobalChatInBubble, uuid)) {
             messenger.excludedFromGlobalChat.add(uuid)
         }
     }

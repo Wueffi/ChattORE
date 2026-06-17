@@ -13,14 +13,14 @@ import net.kyori.adventure.text.Component.textOfChildren
 import org.openredstone.chattore.*
 
 // TODO: rename the key, requires a DB migration
-private val CommandSpyEnabled = Setting<Boolean>("spy")
-private val SocialSpyEnabled = Setting<Boolean>("socialSpy")
+private val CommandSpyEnabled = Setting("spy", default = false)
+private val SocialSpyEnabled = Setting("socialSpyEnabled", default = false)
 
 typealias Wiretap = (Component) -> Unit
 
 fun PluginScope.createSpyingFeature(database: Storage, formatConfig: FormatConfig): Wiretap {
-    fun spyAudience(spySetting: Setting<Boolean>) =
-        proxy.all { it.hasChattorePrivilege && database.getSetting(spySetting, it.uniqueId) == true }
+    fun spyAudience(spyEnabled: Setting<Boolean>) =
+        proxy.all { it.hasChattorePrivilege && database.getSetting(spyEnabled, it.uniqueId) }
 
     val commandSpies = spyAudience(CommandSpyEnabled)
     val socialSpies = spyAudience(SocialSpyEnabled)
@@ -55,9 +55,9 @@ private class SpyCommands(private val database: Storage) : BaseCommand() {
         toggleSpy(player, SocialSpyEnabled, "Social")
     }
 
-    private fun toggleSpy(player: Player, spySetting: Setting<Boolean>, kind: String) {
-        val newSetting = database.getSetting(spySetting, player.uniqueId) != true
-        database.setSetting(spySetting, player.uniqueId, newSetting)
+    private fun toggleSpy(player: Player, spyEnabled: Setting<Boolean>, kind: String) {
+        val newSetting = !database.getSetting(spyEnabled, player.uniqueId)
+        database.setSetting(spyEnabled, player.uniqueId, newSetting)
         player.sendInfo(
             if (newSetting) {
                 "$kind spy enabled."

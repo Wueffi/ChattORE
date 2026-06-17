@@ -48,7 +48,7 @@ object JsonSetting : Table("setting") {
     val uuidKeyIndex = index("setting_uuid_key_index", true, uuid, key)
 }
 
-class Setting<T : Any>(val key: String)
+class Setting<T : Any>(val key: String, val default: T)
 
 class Storage(
     dbFile: Path,
@@ -158,10 +158,10 @@ class Storage(
         settingCache[setting to uuid] = value
     }
 
-    inline fun <reified T : Any> getSetting(setting: Setting<T>, uuid: UUID): T? =
+    inline fun <reified T : Any> getSetting(setting: Setting<T>, uuid: UUID): T =
         unsafeGetSetting(setting, uuid, Json.serializersModule.serializer())
 
-    fun <T : Any> unsafeGetSetting(setting: Setting<T>, uuid: UUID, deserializer: DeserializationStrategy<T>): T? {
+    fun <T : Any> unsafeGetSetting(setting: Setting<T>, uuid: UUID, deserializer: DeserializationStrategy<T>): T {
         val cached = settingCache[setting to uuid]
         @Suppress("UNCHECKED_CAST")
         if (cached != null) return cached as T
@@ -171,7 +171,7 @@ class Storage(
             }.singleOrNull() ?: return@transaction null
             val jsonString = result[JsonSetting.value]
             Json.decodeFromString(deserializer, jsonString)
-        } ?: return null
+        } ?: setting.default
         settingCache[setting to uuid] = value
         return value
     }
