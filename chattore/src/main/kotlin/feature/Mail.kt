@@ -19,8 +19,9 @@ import kotlin.math.min
 fun PluginScope.createMailFeature(
     database: Storage,
     userCache: UserCache,
+    chatConfirmations: ChatConfirmations,
 ) {
-    registerCommands(Mail(database, userCache))
+    registerCommands(Mail(database, userCache, chatConfirmations))
     registerListeners(MailListener(plugin, database, proxy))
 }
 
@@ -50,7 +51,7 @@ private class MailContainer(private val userCache: UserCache, private val messag
     private val pageSize = 6
     fun getPage(page: Int = 0): Component {
         val maxPage = messages.size / pageSize
-        if (page > maxPage || page < 0) {
+        if (page !in 0..maxPage) {
             return "Invalid page requested".toComponent()
         }
         val pageStart = page * pageSize
@@ -97,6 +98,7 @@ private class MailContainer(private val userCache: UserCache, private val messag
 private class Mail(
     private val database: Storage,
     private val userCache: UserCache,
+    private val chatConfirmations: ChatConfirmations,
 ) : BaseCommand() {
     private val mailTimeouts = mutableMapOf<UUID, Long>()
 
@@ -107,7 +109,7 @@ private class Mail(
     fun mailbox(player: Player, @Default("0") page: Int) {
         val container = MailContainer(
             userCache,
-            database.getMessages(player.uniqueId)
+            database.getMessages(player.uniqueId),
         )
         player.sendMessage(container.getPage(page))
     }
@@ -122,13 +124,15 @@ private class Mail(
         }
         val targetUuid = userCache.uuidOrNull(target)
             ?: throw ChattoreException("We do not recognize that user!")
-        mailTimeouts[player.uniqueId] = now
-        database.insertMessage(player.uniqueId, targetUuid, message)
-        player.sendRichMessage(
-            "<gold>[</gold><red>To <recipient></red><gold>]</gold> <message>",
-            "message" toS message,
-            "recipient" toS target,
-        )
+        chatConfirmations.submit(player, message) {
+            mailTimeouts[player.uniqueId] = now
+            database.insertMessage(player.uniqueId, targetUuid, message)
+            player.sendRichMessage(
+                "<gold>[</gold><red>To <recipient></red><gold>]</gold> <message>",
+                "message" toS message,
+                "recipient" toS target,
+            )
+        }
     }
 
     @Subcommand("read")
@@ -152,11 +156,14 @@ private class MailListener(
     fun joinEvent(event: LoginEvent) {
         val unreadCount = database.getMessages(event.player.uniqueId).filter { !it.read }.size
         if (unreadCount > 0)
-            proxy.scheduler.buildTask(plugin, Runnable {
-                event.player.sendRichMessage(
-                    "<yellow>You have <red><count></red> unread message(s)! <gold><b><hover:show_text:'View your mailbox'><click:run_command:'/mail mailbox'>Click here to view</click></hover></b></gold>.",
-                    "count" toS unreadCount.toString(),
-                )
-            }).delay(2L, TimeUnit.SECONDS).schedule()
+            proxy.scheduler.buildTask(
+                plugin,
+                Runnable {
+                    event.player.sendRichMessage(
+                        "<yellow>You have <red><count></red> unread message(s)! <gold><b><hover:show_text:'View your mailbox'><click:run_command:'/mail mailbox'>Click here to view</click></hover></b></gold>.",
+                        "count" toS unreadCount.toString(),
+                    )
+                },
+            ).delay(2L, TimeUnit.SECONDS).schedule()
     }
 }

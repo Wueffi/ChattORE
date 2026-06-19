@@ -56,10 +56,10 @@ class ChattORE @Inject constructor(
             createChatFeature(messenger, chatConfirmations, bubbleManager)
             createChattoreFeature()
             createDiscordFeature(messenger, emojis, config.discord)
-            createFunCommandsFeature()
-            createHelpOpFeature()
+            createFunCommandsFeature(chatConfirmations)
+            createHelpOpFeature(chatConfirmations)
             createJoinLeaveFeature(config.format)
-            createMailFeature(database, userCache)
+            createMailFeature(database, userCache, chatConfirmations)
             createMessageFeature(messenger, chatConfirmations, wiretap)
             createNicknameFeature(
                 database, userCache,
@@ -69,7 +69,7 @@ class ChattORE @Inject constructor(
                     config.nicknamePresets.mapValues { (_, v) -> NickPreset(v) }.toSortedMap(),
                 ),
             )
-            createProfileFeature(database, luckPerms, userCache)
+            createProfileFeature(database, luckPerms, userCache, chatConfirmations)
         }
     }
 
