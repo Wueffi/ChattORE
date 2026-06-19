@@ -28,13 +28,21 @@ class ChatConfirmations(
             .onFailure { logger.error("Invalid regex $pattern: ${it.message}") }
             .getOrNull()
     }
-    private val flags = ConcurrentHashMap<UUID, Pair<String, () -> Unit>>()
+    private val flags = ConcurrentHashMap<UUID, Pair<String, (Player) -> Unit>>()
 
-    fun submit(player: Player, message: String, proceed: () -> Unit) {
+    /**
+     * Submit [message] for flagging. [proceed] will be called with an up-to-date instance of [player]
+     * upon confirmation or if no flagging happens. This is for the rare case when [player] disconnects
+     * after submit is called and joins back to do /confirmmessage. In that case, the Player object is invalidated
+     * due to disconnecting, so we can supply back a fresh one from the /confirmmessage event handler in order to
+     * simplify calls to [submit]. The recommended way to call this is to shadow the variable for [player] in the
+     * [proceed] lambda's argument. See: literally any call to this function.
+     */
+    fun submit(player: Player, message: String, proceed: (Player) -> Unit) {
         val matches = regexes.filter { it.containsMatchIn(message) }
         if (matches.isEmpty()) {
             flags.remove(player.uniqueId)
-            proceed()
+            proceed(player)
             return
         }
         fun String.highlight(r: Regex) = r.replace(this) { match -> "<red>${match.value}</red>" }
@@ -60,7 +68,7 @@ class ChatConfirmations(
             player.sendRichMessage("<red>Override recognized")
             flags.remove(player.uniqueId)
             logger.info("${player.username} (${player.uniqueId}) FLAGGED MESSAGE OVERRIDE: $message")
-            proceed()
+            proceed(player)
         }
     }
 }

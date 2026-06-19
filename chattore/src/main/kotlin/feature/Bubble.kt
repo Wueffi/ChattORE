@@ -288,7 +288,7 @@ private class BubbleCommand(
     @CommandAlias("shout")
     @Description("Send a message to global chat when in a bubble")
     fun shout(sender: Player, message: String) {
-        chatConfirmations.submit(sender, message) {
+        chatConfirmations.submit(sender, message) { sender ->
             messenger.broadcastChatMessage(sender, message)
             if (sender.uniqueId in messenger.excludedFromGlobalChat) {
                 sender.sendMessage(

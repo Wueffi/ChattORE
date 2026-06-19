@@ -20,8 +20,9 @@ fun PluginScope.createMailFeature(
     database: Storage,
     userCache: UserCache,
     chatConfirmations: ChatConfirmations,
+    wiretap: Wiretap,
 ) {
-    registerCommands(Mail(database, userCache, chatConfirmations))
+    registerCommands(Mail(database, userCache, chatConfirmations, wiretap))
     registerListeners(MailListener(plugin, database, proxy))
 }
 
@@ -99,6 +100,7 @@ private class Mail(
     private val database: Storage,
     private val userCache: UserCache,
     private val chatConfirmations: ChatConfirmations,
+    private val wiretap: Wiretap,
 ) : BaseCommand() {
     private val mailTimeouts = mutableMapOf<UUID, Long>()
 
@@ -124,13 +126,17 @@ private class Mail(
         }
         val targetUuid = userCache.uuidOrNull(target)
             ?: throw ChattoreException("We do not recognize that user!")
-        chatConfirmations.submit(player, message) {
+        chatConfirmations.submit(player, message) { player ->
             mailTimeouts[player.uniqueId] = now
             database.insertMessage(player.uniqueId, targetUuid, message)
             player.sendRichMessage(
                 "<gold>[</gold><red>To <recipient></red><gold>]</gold> <message>",
                 "message" toS message,
                 "recipient" toS target,
+            )
+            wiretap(
+                "<gold>[</gold><red>From <sender> to <recipient><gold>]</gold> <message>"
+                    .render("message" toS message, "sender" toS player.username, "recipient" toS target),
             )
         }
     }

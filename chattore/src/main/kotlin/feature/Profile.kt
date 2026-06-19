@@ -43,7 +43,7 @@ private class Profile(
     @Subcommand("about")
     @CommandPermission("chattore.profile.about")
     fun about(player: Player, about: String) {
-        chatConfirmations.submit(player, "/$execCommandLabel about $about") {
+        chatConfirmations.submit(player, "/$execCommandLabel about $about") { player ->
             database.setAbout(player.uniqueId, about)
             player.sendInfo("Set your about to '$about'.")
         }

@@ -25,12 +25,12 @@ private class ChatListener(
         val message = event.message
         val bubble = bubbleManager.getBubbleByPlayer(player)
         if (bubble == null) {
-            confirmations.submit(player, message) {
+            confirmations.submit(player, message) { player ->
                 messenger.broadcastChatMessage(player, message)
             }
             return
         }
-        confirmations.submit(player, message) {
+        confirmations.submit(player, message) { player ->
             if (bubbleManager.getBubbleByPlayer(player) != bubble) {
                 player.sendError("You are no longer in the bubble you're trying to send a message to")
                 return@submit

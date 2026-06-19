@@ -59,7 +59,7 @@ class ChattORE @Inject constructor(
             createFunCommandsFeature(chatConfirmations)
             createHelpOpFeature(chatConfirmations)
             createJoinLeaveFeature(config.format)
-            createMailFeature(database, userCache, chatConfirmations)
+            createMailFeature(database, userCache, chatConfirmations, wiretap)
             createMessageFeature(messenger, chatConfirmations, wiretap)
             createNicknameFeature(
                 database, userCache,

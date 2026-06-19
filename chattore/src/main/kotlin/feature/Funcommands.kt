@@ -126,7 +126,7 @@ private fun createFunCommands(
             "arg-2" toS (args.getOrNull(2) ?: "<missing>"),
         )
 
-        chatConfirmations.submit(source, "/${invocation.alias()} $allArgs") {
+        chatConfirmations.submit(source, "/${invocation.alias()} $allArgs") { source ->
             cmd.globalChat?.let { proxy.all.sendRichMessage(it, *replacements) }
             cmd.localChat?.let { source.sendRichMessage(it, *replacements) }
             cmd.othersChat?.let { proxy.allBut(source).sendRichMessage(it, *replacements) }

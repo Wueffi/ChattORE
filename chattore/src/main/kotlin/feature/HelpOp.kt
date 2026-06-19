@@ -25,7 +25,7 @@ private class HelpOp(
     @Syntax("[message]")
     fun default(player: Player, statement: String) {
         if (statement.isEmpty()) throw ChattoreException("You have to have a problem first!") // : )
-        chatConfirmations.submit(player, statement) {
+        chatConfirmations.submit(player, statement) { player ->
             logger.info("[HelpOp] ${player.username}: $statement")
             proxy.all { it.hasChattorePrivilege || it.uniqueId == player.uniqueId }
                 .sendRichMessage(

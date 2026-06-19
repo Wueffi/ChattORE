@@ -45,7 +45,7 @@ fun PluginScope.createMessageFeature(
         @Syntax("[target] <message>")
         fun default(sender: Player, recipient: OnlinePlayer, message: String) {
             val recipientUuid = recipient.player.uniqueId
-            chatConfirmations.submit(sender, message) {
+            chatConfirmations.submit(sender, message) { sender ->
                 val recipientPlayer = proxy.playerOrNull(recipientUuid)
                     ?: throw ChattoreException("The person you're trying to message is no longer online!")
                 sendMessage(sender, recipientPlayer, message)
@@ -59,7 +59,7 @@ fun PluginScope.createMessageFeature(
         @Default
         fun default(sender: Player, message: String) {
             val recipientUuid = replyMap[sender.uniqueId] ?: throw ChattoreException("You have no one to reply to!")
-            chatConfirmations.submit(sender, message) {
+            chatConfirmations.submit(sender, message) { sender ->
                 val recipient = proxy.playerOrNull(recipientUuid)
                     ?: throw ChattoreException("The person you are trying to reply to is no longer online!")
                 sendMessage(sender, recipient, message)
