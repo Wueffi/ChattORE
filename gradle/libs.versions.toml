@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.1.21"
+kotlin = "2.4.0"
 kotlinx-serialization = "1.8.1"
 exposed = "0.58.0"
 jackson = "2.19.0"
