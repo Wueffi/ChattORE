@@ -343,15 +343,15 @@ class Bubble(
 }
 
 class BubbleManager {
-    private val _bubbles: MutableList<Bubble> = mutableListOf()
-    val bubbles: List<Bubble> get() = _bubbles
+    val bubbles: List<Bubble>
+        field = mutableListOf()
 
     fun createBubble(player: UUID): Bubble =
-        Bubble(player, mutableSetOf(player), mutableSetOf(), isPrivate = true).also(_bubbles::add)
+        Bubble(player, mutableSetOf(player), mutableSetOf(), isPrivate = true).also(bubbles::add)
 
     fun removeBubble(bubble: Bubble) {
-        _bubbles.remove(bubble)
+        bubbles.remove(bubble)
     }
 
-    fun getBubbleByPlayer(player: Player): Bubble? = _bubbles.firstOrNull { player.uniqueId in it.players }
+    fun getBubbleByPlayer(player: Player): Bubble? = bubbles.firstOrNull { player.uniqueId in it.players }
 }
